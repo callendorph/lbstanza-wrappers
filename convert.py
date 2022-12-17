@@ -16,11 +16,12 @@ class EnumVisitor(c_ast.NodeVisitor):
 
   def __init__(self, opts):
     self._opts = opts
-    if os.path.exists(self._opts.out_dir):
-      if not os.path.isdir(self._opts.out_dir):
-        raise ValueError("Output Directory Exists but isn't a Directory")
-    else:
-      os.makedirs(self._opts.out_dir)
+    if not self._opts.dry_run:
+      if os.path.exists(self._opts.out_dir):
+        if not os.path.isdir(self._opts.out_dir):
+          raise ValueError("Output Directory Exists but isn't a Directory")
+      else:
+        os.makedirs(self._opts.out_dir)
 
     super().__init__()
 
@@ -82,10 +83,12 @@ class EnumVisitor(c_ast.NodeVisitor):
       return
 
     enumerators = list(self.gen_enumerators(declType))
-
-    fpath = os.path.join(self._opts.out_dir, "{}.stanza".format(declName))
-    with open(fpath, "w") as f:
-      self.gen_stanza(declName, enumerators, f=f)
+    if not self._opts.dry_run:
+      fpath = os.path.join(self._opts.out_dir, "{}.stanza".format(declName))
+      with open(fpath, "w") as f:
+        self.gen_stanza(declName, enumerators, f=f)
+    else:
+      self.gen_stanza(declName, enumerators, f=sys.stdout)
 
 def process_enums(opts):
   fake_libc_arg = "-I" + pycparser_fake_libc.directory
@@ -98,9 +101,11 @@ def setup_opts():
   parser.add_argument("-i", "--input", type=str, help="Path to a file that will be parsed for function declarations")
 
   sub = parser.add_subparsers(help="Extraction Operations")
+
   ep = sub.add_parser("enums", help="Extract Enumerated Types into a Stanza Style")
   ep.add_argument("--pkg-prefix", help="Prefix string when declaring the 'defpackage'")
   ep.add_argument("--out-dir", help="Directory where stanza files will be created.")
+  ep.add_argument("--dry-run", action="store_true", help="Generate all output to stdout instead of files in the `--out-dir`.")
   ep.set_defaults(func=process_enums)
 
   opts = parser.parse_args()
