@@ -78,6 +78,10 @@ class EnumVisitor(c_ast.NodeVisitor):
   def visit_TypeDecl(self, node):
     #print("Node: {}".format(node))
     declName = node.declname
+
+    if declName in self._opts.skip:
+      return
+
     declType = node.type
     if not isinstance(declType, c_ast.Enum):
       return
@@ -106,6 +110,7 @@ def setup_opts():
   ep.add_argument("--pkg-prefix", help="Prefix string when declaring the 'defpackage'")
   ep.add_argument("--out-dir", help="Directory where stanza files will be created.")
   ep.add_argument("--dry-run", action="store_true", help="Generate all output to stdout instead of files in the `--out-dir`.")
+  ep.add_argument("--skip", action="append", help="Don't generate any enumeration files for objects whose name matches the passed string. This argument can be used multiple times.")
   ep.set_defaults(func=process_enums)
 
   opts = parser.parse_args()
