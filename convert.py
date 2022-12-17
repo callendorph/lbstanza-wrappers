@@ -96,7 +96,7 @@ def process_enums(opts):
 def setup_opts():
   parser = argparse.ArgumentParser()
   parser.add_argument("-i", "--input", type=str, help="Path to a file that will be parsed for function declarations")
-  #parser.add_argument("-e", "--enums", action="store_true", help="Create Enum definitions")
+
   sub = parser.add_subparsers(help="Extraction Operations")
   ep = sub.add_parser("enums", help="Extract Enumerated Types into a Stanza Style")
   ep.add_argument("--pkg-prefix", help="Prefix string when declaring the 'defpackage'")
