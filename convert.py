@@ -153,14 +153,14 @@ class FuncDeclExporter(LBStanzaExporter):
         self.lprint("dynamic-library-symbol(shlib, String(\"{}\")).address".format(name))
       self.lprint("")
 
-  def dump_dynamics(self, funcs): 
-    self.dump_dynamic_ptr(funcs)
-    self.dump_dynamic_wrapper(funcs)
-
-  def dump_dynamic_lib(self): 
+  def dump_dynamic_lib(self, opts): 
+    defName = opts.pkg_prefix
+    defName = defName.replace("/", "-")
+    varName = opts.pkg_prefix
+    varName = varName.replace("/", "_").upper()
     lines = [
-      "val DEF_LIB_PATH=\"./FIXME.dll\"",
-      "val ENV_LIB_PATH_NAME=\"FIXME_SHARED_LIB\"",
+      "val DEF_LIB_PATH=\"./lib{}.dll\"".format(defName),
+      "val ENV_LIB_PATH_NAME=\"{}_SHARED_LIB\"".format(varName),
       ""
       "defn get-shared-lib () -> String :",
       "  label<String> return:",
@@ -178,7 +178,13 @@ class FuncDeclExporter(LBStanzaExporter):
     for line in lines:
       self.lprint(line)
 
-  def dump_both(self, funcs):
+  def dump_dynamics(self, funcs, opts): 
+    self.dump_dynamic_lib(opts)
+    self.dump_dynamic_ptr(funcs)
+    self.dump_dynamic_wrapper(funcs)
+
+
+  def dump_both(self, funcs, opts):
     """ Generate both static and dynamic imports and
     use a compile time flag to 
     """
@@ -188,9 +194,7 @@ class FuncDeclExporter(LBStanzaExporter):
       self.dump_static_wrapper(funcs)
     self.lprint("#else:")
     with self.indented():
-      self.dump_dynamic_lib()
-      self.dump_dynamic_ptr(funcs)
-      self.dump_dynamic_wrapper(funcs)
+      self.dump_dynamics(funcs, opts)
 
   def dump_func_decls(self, funcs, opts):
     self.dump_autogen_header()
@@ -199,12 +203,10 @@ class FuncDeclExporter(LBStanzaExporter):
 
     if opts.func_form == "static" : 
       self.dump_static_decl(funcs)
-    elif opts.func_form == "dynamic" : 
-      self.dump_dynamic_lib()
-      self.dump_dynamic_ptr(funcs)
-      self.dump_dynamic_wrapper(funcs)
+    elif opts.func_form == "dynamic" :
+      self.dump_dynamics(funcs, opts) 
     elif opts.func_form == "both": 
-      self.dump_both(funcs)
+      self.dump_both(funcs, opts)
 
 class EnumExporter(LBStanzaExporter): 
 
