@@ -763,9 +763,18 @@ def process_enums(opts):
 
 def setup_opts():
   desc = """
-  Function Declaration Generator 
+  LBStanza C Wrapper Generator 
 
-  This command will generate all the exported C function declarations
+  This tool is used to generate wrappers around a C library (static or dynamic).
+
+  This tool uses 'pycparser'. As such, you should follow instructions defined in
+  that project for using the C preprocessor to message headers before feeding them
+  to this tool (eg, 'gcc -E -std=c99 headers.h' ). 
+
+  Function Declaration Generator 
+  ------------------------------
+
+  This sub-command will generate all the exported C function declarations
   as stanza external declarartions. 
 
   Static: 
@@ -775,11 +784,45 @@ def setup_opts():
   Dynamic
     Generates the dynamic shared library import format. 
 
+    EXAMPLE:
+
+      val DEF_LIB_PATH = "./libPREFIX.dll"
+      val ENV_LIB_PATH_NAME = "PREFIX_SHARED_LIB"
+      defn get-shared-lib () -> String :
+        label<String> return:
+          var sharedLib = get-env(ENV_LIB_PATH_NAME)
+          match(sharedLib) :
+            (fpath:String) :
+              return(fpath)
+            (x:False):
+              return(DEF_LIB_PATH)
+      
+      val shlibPath = get-shared-lib()
+      val shlib = dynamic-library-open(shlibPath)
+      
+      lostanza val p_SomeFunc: ptr<(int -> ptr<?>)> = 
+        dynamic-library-symbol(shlib, String("SomeFunc")).address
+
+      public lostanza defn w_SomeFunc (v:int) -> ptr<?> :
+        val ret = call-c [p_SomeFunc](v)
+        return ret
+
   Both 
     Generates both formats but with a compile time flag.
+
+  Enum Generator
+  --------------
+  This sub-command will generate a stanza Enum definition for each 
+  C-enum declaration. 
+
+  For well-formed C-enums - this code will use the `defenum` construct
+  in stanza. "Well-Formed" in this context means values start at zero and
+  increase monotonically without gaps. 
+  For non-"Well-Formed" C-enums, this will generate a backup implementation
+  that is not as pretty or performant. 
   """
-  parser = argparse.ArgumentParser()
-  parser.add_argument("-i", "--input", type=str, help="Path to a file that will be parsed for function declarations")
+  parser = argparse.ArgumentParser(description=desc, formatter_class=argparse.RawDescriptionHelpFormatter)
+  parser.add_argument("-i", "--input", type=str, help="Path to the header file that will be parsed for function declarations")
 
   sub = parser.add_subparsers(help="Extraction Operations")
 
