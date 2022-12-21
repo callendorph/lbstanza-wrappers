@@ -208,6 +208,44 @@ class FuncDeclExporter(LBStanzaExporter):
     elif opts.func_form == "both": 
       self.dump_both(funcs, opts)
 
+class NativeEnumExporter(LBStanzaExporter):
+  """ I implemented the original enum exportation code
+  before I knew about `defenum` - unfortunately, `defenum`
+  wasn't documented anywhere except in a file in the `examples`
+  folder at the time I wrote this :(
+  In any case - this is a better implementation for standard enum types
+  that don't attempt to specify specific integer values. 
+  If the enum that you are attempting to wrap contains a gap or 
+  a starting number that is not 0 - then this will likely not work
+  because there is no way to control the numbering like there is 
+  in C. 
+  """
+
+  def __init__(self, fout, name, enumerators): 
+    super().__init__(fout)
+    self._name = name
+    self._enumerators = enumerators
+
+  def dump_enums(self, opts):
+    self.dump_autogen_header()
+
+    imports = ["core",]
+    self.dump_package_decl(opts.pkg_prefix, self._name, imports)
+
+    self.lprint("public defenum {}:".format(self._name))
+    with self.indented():
+      for eName, v in self._enumerators :
+        self.lprint("{}".format(eName))
+    self.lprint("")
+
+    # I add a lostanza constructor for ease of use with 
+    #  wrappers
+    self.lprint("public lostanza defn {} (v:int) -> ref<{}> :".format(self._name, self._name))
+    with self.indented():
+      self.lprint("return {}(new Int{{v}})".format(self._name))
+    self.lprint("")
+
+
 class EnumExporter(LBStanzaExporter): 
 
   def __init__(self, fout, name, enumerators): 
@@ -640,6 +678,8 @@ class EnumVisitor(c_ast.NodeVisitor):
       else:
         os.makedirs(self._opts.out_dir)
 
+    self._enums = OrderedDict()
+
     super().__init__()
 
   def gen_enumerators(self, node):
@@ -659,6 +699,21 @@ class EnumVisitor(c_ast.NodeVisitor):
 
       currValue += 1
 
+  def is_well_formed(self, enumerators): 
+    """ This function attempts to determine whether the enumerators
+    for this C enum are well formed. In this context, well-formed means:
+      - Enumerators start at value 0
+      - Enumerators are monotically increasing
+      - Enumerators always increment by one for the next value (ie, there
+         are no gaps.)
+    """
+    for i, e in enumerate(enumerators): 
+      eName, v = e
+      if i != v:
+        return False
+
+    return True
+
   def visit_TypeDecl(self, node):
     #print("Node: {}".format(node))
     declName = node.declname
@@ -670,15 +725,28 @@ class EnumVisitor(c_ast.NodeVisitor):
     if not isinstance(declType, c_ast.Enum):
       return
 
+    if declName in self._enums.keys():
+      logging.info("Ignoring Duplicate Enum: {}".format(declName))
+      return 
+
     enumerators = list(self.gen_enumerators(declType))
+    wellFormed = self.is_well_formed(enumerators)
+
+    if wellFormed and self._opts.use_defenum:
+      expCls = NativeEnumExporter
+    else:
+      expCls = EnumExporter
+
     if not self._opts.dry_run:
       fpath = os.path.join(self._opts.out_dir, "{}.stanza".format(declName))
       with open(fpath, "w") as f:
-        exp = EnumExporter(f, declName, enumerators)
+        exp = expCls(f, declName, enumerators)
         exp.dump_enums(self._opts)
     else:
-        exp = EnumExporter(sys.stdout, declName, enumerators)
+        exp = expCls(sys.stdout, declName, enumerators)
         exp.dump_enums(self._opts)
+
+    self._enums[declName] = enumerators
 
 def process_func_decl(opts):
   fake_libc_arg = "-I" + pycparser_fake_libc.directory
@@ -719,6 +787,7 @@ def setup_opts():
   ep.add_argument("--pkg-prefix", help="Prefix string when declaring the 'defpackage'")
   ep.add_argument("--out-dir", help="Directory where stanza files will be created.")
   ep.add_argument("--dry-run", action="store_true", help="Generate all output to stdout instead of files in the `--out-dir`.")
+  ep.add_argument("--use-defenum", action="store_true", help="Generate defenum structures for all well-formed C enums.")
   ep.add_argument("--skip", action="append", default=[], help="Don't generate any enumeration files for objects whose name matches the passed string. This argument can be used multiple times.")
   ep.set_defaults(func=process_enums)
 
