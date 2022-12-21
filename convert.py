@@ -159,8 +159,8 @@ class FuncDeclExporter(LBStanzaExporter):
     varName = opts.pkg_prefix
     varName = varName.replace("/", "_").upper()
     lines = [
-      "val DEF_LIB_PATH=\"./lib{}.dll\"".format(defName),
-      "val ENV_LIB_PATH_NAME=\"{}_SHARED_LIB\"".format(varName),
+      "val DEF_LIB_PATH = \"./lib{}.dll\"".format(defName),
+      "val ENV_LIB_PATH_NAME = \"{}_SHARED_LIB\"".format(varName),
       ""
       "defn get-shared-lib () -> String :",
       "  label<String> return:",
