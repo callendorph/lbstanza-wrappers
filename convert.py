@@ -691,11 +691,25 @@ class EnumVisitor(c_ast.NodeVisitor):
         yield (name, currValue)
       else:
         try:
-          currValue = int(value.value.value)
-          yield (name, currValue)
+          # Sometimes this value can be set to a negative value 
+          #  and when that happens we get a `UnaryOp` node for the minus sign. 
+          #  Unfortunately, that opens up a bit of a bag of worms - 
+          #    do we use the AST to change this into python math and then 
+          #    compute the value ? 
+          obj = value.value
+          if type(obj) is c_ast.Constant:
+            currValue = int(obj.value, base=0)
+            yield (name, currValue)
+          elif type(obj) is c_ast.UnaryOp:
+            if obj.op != '-':
+              raise NotImplementedError("Unhandled Unary Op for Enum Value Def: {}".format(obj.op))
+            currValue = int (obj.op + obj.expr.value, base=0)
+            yield (name, currValue)
+          else:
+            raise NotImplementedError("Unhandled AST Node for Enum Value Extraction: {}".format(obj))
         except Exception as exc:
           logging.error("Enumerator[{}] : Failed Extract Value: {}".format(name, exc))
-          logging.error("Node: {}", value.value)
+          logging.error("Node: {}", node)
 
       currValue += 1
 
