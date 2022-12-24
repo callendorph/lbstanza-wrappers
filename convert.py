@@ -363,6 +363,7 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
     "float" : "float",
     "int" : "int",
     "unsigned" : "int",
+    "signed" : "int",
     "long" : "long",
     "char" : "byte",
     "void" : "void",
@@ -393,6 +394,7 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
     #   have to handle it a different way. 
     "struct" : "?",
     "ptr<?>" : "ptr<?>",
+    "ptr<byte>" : "ptr<byte>",
     # This is a special case
     "funcdef" : "funcdef"    
   }
