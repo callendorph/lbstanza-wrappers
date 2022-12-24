@@ -452,7 +452,7 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
     args, retData, *others = data 
     retType, *_ = retData
     argStr = ",".join([v[2] for k,v in args.items()])
-    ret = "( ({}) -> {} )".format(argStr, retType)
+    ret = "ptr<( ({}) -> {} )>".format(argStr, retType)
     return ret
 
   def capture_typedef(self, node): 
