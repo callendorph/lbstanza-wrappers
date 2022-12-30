@@ -44,10 +44,13 @@ class LBStanzaExporter(Exporter):
   for creating LBStanza code.
   """
   RESERVED_WORDS = [
-    "val", "when", "if", "else", "defn", "defmethod",
-    "defmulti", "lostanza", "public", 
+    "val", "var", "when", "if", "is", "is-not", "else", "defn", "defmethod",
+    "defmulti", "lostanza", "public", "new", "to", "through", "by",
     "ptr", "int", "long", "double", "float", "char", "byte",
-    "return", "label", "generate", 
+    "return", "label", "generate", "from", "defstruct", "with",
+    "try", "catch", "finally", "attempt", "multifn", "deftype", "not",
+    "match", "switch", "let", "let-var" "where", "in", "within", "while",
+    "String", "Int", "Double", 
   ]
 
   def dump_autogen_header(self):
