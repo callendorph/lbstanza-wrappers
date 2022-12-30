@@ -595,9 +595,13 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
     """ Stanza has some keywords that can't be used as variable names
       like `val`, `when`, etc. This function inspects the 
     """
-    if name not in LBStanzaExporter.RESERVED_WORDS:
+
+    if name is not None and name not in LBStanzaExporter.RESERVED_WORDS:
       return name
     
+    if name is None:
+      name = "missing_name"
+
     newName = name + "_v"
     i = 1
     while newName in argMap.keys():
