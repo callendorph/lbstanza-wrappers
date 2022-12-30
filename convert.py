@@ -370,7 +370,7 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
     "long" : "long",
     "char" : "byte",
     "void" : "void",
-    "bool" : "int",
+    "bool" : "byte", #  <-- GCC uses byte for this
     "Bool" : "int",
     "_Bool" : "int",
     "uint" : "int",
