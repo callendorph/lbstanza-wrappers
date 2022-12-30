@@ -771,16 +771,25 @@ class EnumVisitor(c_ast.NodeVisitor):
 
     self._enums[declName] = enumerators
 
+def prep_args(opts):
+  def to_header(fpath):
+    return "-I" + fpath
+  fake_libc_arg = to_header(pycparser_fake_libc.directory)
+  others = [to_header(x) for x in opts.include]
+  cpp_arg_list = others + [fake_libc_arg]
+  cpp_args = " ".join(cpp_arg_list)
+  return cpp_args
+
 def process_func_decl(opts):
-  fake_libc_arg = "-I" + pycparser_fake_libc.directory
-  node = parse_file(opts.input, use_cpp=True, cpp_args=fake_libc_arg)
+  cpp_args = prep_args(opts)
+  node = parse_file(opts.input, use_cpp=True, cpp_args=cpp_args)
   v = FuncDeclVisitor(opts)
   v.visit(node)
   v.export()
 
 def process_enums(opts):
-  fake_libc_arg = "-I" + pycparser_fake_libc.directory
-  node = parse_file(opts.input, use_cpp=True, cpp_args=fake_libc_arg)
+  cpp_args = prep_args(opts)
+  node = parse_file(opts.input, use_cpp=True, cpp_args=cpp_args)
   v = EnumVisitor(opts)
   v.visit(node)
 
@@ -846,6 +855,7 @@ def setup_opts():
   """
   parser = argparse.ArgumentParser(description=desc, formatter_class=argparse.RawDescriptionHelpFormatter)
   parser.add_argument("-i", "--input", type=str, help="Path to the header file that will be parsed for function declarations")
+  parser.add_argument("-I", "--include", action="append", default=[], help="Add an additional search path for headers. This arg can be used multiple times.")  
 
   sub = parser.add_subparsers(help="Extraction Operations")
 
