@@ -506,6 +506,8 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
           #  to use a type definition.
           self._enums[param.type.declname] = [] # @TODO implement Enum List Capture
           logging.debug("{}: Captured Enum: {}".format(node.coord, param.type.declname))
+        elif type(baseNode) is c_ast.Union:
+          logging.warn("Ignoring Typedef of Base Union: {}".format(baseNode))
         else:
           raise RuntimeError("{}: Unhandled declaration base: {}".format(node.coord, baseNode))
         return
