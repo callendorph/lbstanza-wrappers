@@ -385,21 +385,12 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
   }
 
   FIXED_PTR_MAPPING = { 
-    "double" : "double",
-    "float" : "float",
-    "int" : "int",
-    "long" : "long",
     "char" : "byte",
-    "byte" : "byte",
     "void" : "?",
     # This only affects pointers to structures
     #   if it is a struct by value - then we 
     #   have to handle it a different way. 
     "struct" : "?",
-    "ptr<?>" : "ptr<?>",
-    "ptr<byte>" : "ptr<byte>",
-    # This is a special case
-    "funcdef" : "funcdef"    
   }
 
   def __init__(self, opts): 
@@ -424,7 +415,7 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
     self.parent = oldparent
 
   def convert_ptr_type(self, lbType, numPtrs):
-    ptrType = self.FIXED_PTR_MAPPING[lbType]
+    ptrType = self.FIXED_PTR_MAPPING.get(lbType, lbType)
     prefix = "ptr<" * numPtrs
     suffix = ">" * numPtrs
     return prefix + ptrType + suffix
