@@ -287,7 +287,7 @@ class EnumExporter(LBStanzaExporter):
     self.lprint("")
 
   def dump_print(self):
-    self.lprint("defmethod print (o:OutputStream, v:{}) :".format(self._name))
+    self.lprint("public defmethod print (o:OutputStream, v:{}) :".format(self._name))
     with self.indented():
       self.lprint("match(v) :")
       with self.indented():
