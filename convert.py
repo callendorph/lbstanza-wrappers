@@ -256,10 +256,17 @@ class EnumExporter(LBStanzaExporter):
     self._name = name
     self._enumerators = enumerators
 
+  def to_type(self, eName):
+    return "{}_t".format(eName)
+
   def dump_enum_deftypes(self):
     self.lprint("public deftype {} <: Equalable".format(self._name))
     for eName, v in self._enumerators :
-      self.lprint("public deftype {} <: {}".format(eName, self._name))
+      self.lprint("public deftype {} <: {}".format(self.to_type(eName), self._name))
+    self.lprint("")
+
+    for eName, v in self._enumerators :
+      self.lprint("public val {} = new {}".format(eName, self.to_type(eName)))
     self.lprint("")
 
   def dump_to_int(self):
@@ -268,7 +275,7 @@ class EnumExporter(LBStanzaExporter):
       self.lprint("match(v) :")
       with self.indented():
         for eName, v in self._enumerators:
-          self.lprint("(x:{}) : {}".format(eName,v))
+          self.lprint("(x:{}) : {}".format(self.to_type(eName),v))
     self.lprint("")
 
   def dump_constructor(self):
@@ -277,7 +284,7 @@ class EnumExporter(LBStanzaExporter):
       self.lprint("switch {v == _}:")
       with self.indented():
         for eName, v in self._enumerators :
-          self.lprint("{} : new {}".format(v, eName))
+          self.lprint("{} : {}".format(v, eName))
         self.lprint("else: throw(Exception(\"{}: Invalid Enum Value: %_\" % [v]))".format(self._name))
     self.lprint("")
 
@@ -292,13 +299,14 @@ class EnumExporter(LBStanzaExporter):
       self.lprint("match(v) :")
       with self.indented():
         for eName, v in self._enumerators :
-          self.lprint("(x:{}) : print(o, \"{}\")".format(eName, eName))
+          self.lprint("(x:{}) : print(o, \"{}\")".format(self.to_type(eName), eName))
     self.lprint("")
 
   def dump_equals(self):
     self.lprint("public defmethod equal? (a:{}, b:{}) -> True|False :".format(self._name, self._name))
     with self.indented():
       self.lprint("to-int(a) == to-int(b)")
+    self.lprint("")
 
   def dump_enums(self, opts): 
     self.dump_autogen_header()
@@ -309,6 +317,7 @@ class EnumExporter(LBStanzaExporter):
     self.dump_to_int()
     self.dump_constructor()
     self.dump_print()
+    self.dump_equals()
 
 
 class FuncDeclVisitor(c_ast.NodeVisitor): 
