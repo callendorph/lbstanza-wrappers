@@ -257,7 +257,7 @@ class EnumExporter(LBStanzaExporter):
     self._enumerators = enumerators
 
   def dump_enum_deftypes(self):
-    self.lprint("public deftype {}".format(self._name))
+    self.lprint("public deftype {} <: Equalable".format(self._name))
     for eName, v in self._enumerators :
       self.lprint("public deftype {} <: {}".format(eName, self._name))
     self.lprint("")
@@ -295,6 +295,10 @@ class EnumExporter(LBStanzaExporter):
           self.lprint("(x:{}) : print(o, \"{}\")".format(eName, eName))
     self.lprint("")
 
+  def dump_equals(self):
+    self.lprint("public defmethod equal? (a:{}, b:{}) -> True|False :".format(self._name, self._name))
+    with self.indented():
+      self.lprint("to-int(a) == to-int(b)")
 
   def dump_enums(self, opts): 
     self.dump_autogen_header()
