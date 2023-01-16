@@ -257,7 +257,7 @@ class EnumExporter(LBStanzaExporter):
     self._enumerators = enumerators
 
   def to_type(self, eName):
-    return "{}_t".format(eName)
+    return "{}".format(eName)
 
   def dump_enum_deftypes(self):
     self.lprint("public deftype {} <: Equalable".format(self._name))
