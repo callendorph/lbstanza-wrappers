@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from pycparser import c_parser, c_ast, parse_file
 import pycparser_fake_libc
 
-__version__ = "0.1.2"
+__version__ = "0.2.0"
 
 class Exporter(object):
 
