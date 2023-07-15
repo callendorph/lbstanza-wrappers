@@ -50,7 +50,7 @@ class LBStanzaExporter(Exporter):
     "return", "label", "generate", "from", "defstruct", "with",
     "try", "catch", "finally", "attempt", "multifn", "deftype", "not",
     "match", "switch", "let", "let-var" "where", "in", "within", "while",
-    "String", "Int", "Double", 
+    "String", "Int", "Double",
   ]
 
   def dump_autogen_header(self):
@@ -90,7 +90,7 @@ class FuncDeclExporter(LBStanzaExporter):
         voidComment = "  ;  void"
       funcType = self.gen_func_type(argsList, retType)
       self.lprint("extern {} : {}{}".format(name, funcType, voidComment))
-  
+
   def dump_wrapper(self, funcs, deref=False):
     """ Generate the wrapper lostanza function that is used to make
     consistent calling interface from high stanza code.
@@ -127,9 +127,9 @@ class FuncDeclExporter(LBStanzaExporter):
           self.lprint("{}call-c [p_{}]({})".format(retPrefix, name, fArgs))
         else:
           self.lprint("{}call-c {}({})".format(retPrefix, name, fArgs))
-        # @NOTE - here it would be nice to be able to know if 
+        # @NOTE - here it would be nice to be able to know if
         #   this is a void or a true int return.
-        #   We could then do `return false` here and 
+        #   We could then do `return false` here and
         if isVoid:
           self.lprint("return false")
         else:
@@ -142,21 +142,21 @@ class FuncDeclExporter(LBStanzaExporter):
     self.dump_wrapper(funcs, deref=True)
 
   def dump_dynamic_ptr(self, funcs):
-    """ Generate the pointer address import 
+    """ Generate the pointer address import
     Note that these values have the `p_` prefix.
     """
     #   lostanza val p_func_name: ptr<( (int) -> int )> =
     #     dynamic-library-symbol(lib, String("func_name")).address
     for name, data in funcs.items():
       argsList, retData, *others = data
-      retType, isVoid, *_ = retData    
+      retType, isVoid, *_ = retData
       funcType = self.gen_func_type(argsList, retType)
       self.lprint("lostanza val p_{}: ptr<({})> = ".format(name, funcType))
       with self.indented():
         self.lprint("dynamic-library-symbol(shlib, String(\"{}\")).address".format(name))
       self.lprint("")
 
-  def dump_dynamic_lib(self, opts): 
+  def dump_dynamic_lib(self, opts):
     defName = opts.pkg_prefix
     defName = defName.replace("/", "-")
     varName = opts.pkg_prefix
@@ -181,7 +181,7 @@ class FuncDeclExporter(LBStanzaExporter):
     for line in lines:
       self.lprint(line)
 
-  def dump_dynamics(self, funcs, opts): 
+  def dump_dynamics(self, funcs, opts):
     self.dump_dynamic_lib(opts)
     self.dump_dynamic_ptr(funcs)
     self.dump_dynamic_wrapper(funcs)
@@ -189,7 +189,7 @@ class FuncDeclExporter(LBStanzaExporter):
 
   def dump_both(self, funcs, opts):
     """ Generate both static and dynamic imports and
-    use a compile time flag to 
+    use a compile time flag to
     """
     self.lprint("#if-defined(COMPILE-STATIC):")
     with self.indented():
@@ -204,11 +204,11 @@ class FuncDeclExporter(LBStanzaExporter):
     imports = ["core", "core/dynamic-library"]
     self.dump_package_decl(opts.pkg_prefix, opts.pkg_name, imports)
 
-    if opts.func_form == "static" : 
+    if opts.func_form == "static" :
       self.dump_static_decl(funcs)
     elif opts.func_form == "dynamic" :
-      self.dump_dynamics(funcs, opts) 
-    elif opts.func_form == "both": 
+      self.dump_dynamics(funcs, opts)
+    elif opts.func_form == "both":
       self.dump_both(funcs, opts)
 
 class NativeEnumExporter(LBStanzaExporter):
@@ -217,14 +217,14 @@ class NativeEnumExporter(LBStanzaExporter):
   wasn't documented anywhere except in a file in the `examples`
   folder at the time I wrote this :(
   In any case - this is a better implementation for standard enum types
-  that don't attempt to specify specific integer values. 
-  If the enum that you are attempting to wrap contains a gap or 
+  that don't attempt to specify specific integer values.
+  If the enum that you are attempting to wrap contains a gap or
   a starting number that is not 0 - then this will likely not work
-  because there is no way to control the numbering like there is 
-  in C. 
+  because there is no way to control the numbering like there is
+  in C.
   """
 
-  def __init__(self, fout, name, enumerators): 
+  def __init__(self, fout, name, enumerators):
     super().__init__(fout)
     self._name = name
     self._enumerators = enumerators
@@ -241,7 +241,7 @@ class NativeEnumExporter(LBStanzaExporter):
         self.lprint("{}".format(eName))
     self.lprint("")
 
-    # I add a lostanza constructor for ease of use with 
+    # I add a lostanza constructor for ease of use with
     #  wrappers
     self.lprint("public lostanza defn {} (v:int) -> ref<{}> :".format(self._name, self._name))
     with self.indented():
@@ -249,9 +249,9 @@ class NativeEnumExporter(LBStanzaExporter):
     self.lprint("")
 
 
-class EnumExporter(LBStanzaExporter): 
+class EnumExporter(LBStanzaExporter):
 
-  def __init__(self, fout, name, enumerators): 
+  def __init__(self, fout, name, enumerators):
     super().__init__(fout)
     self._name = name
     self._enumerators = enumerators
@@ -308,7 +308,7 @@ class EnumExporter(LBStanzaExporter):
       self.lprint("to-int(a) == to-int(b)")
     self.lprint("")
 
-  def dump_enums(self, opts): 
+  def dump_enums(self, opts):
     self.dump_autogen_header()
 
     imports = ["core",]
@@ -320,13 +320,13 @@ class EnumExporter(LBStanzaExporter):
     self.dump_equals()
 
 
-class FuncDeclVisitor(c_ast.NodeVisitor): 
-  """ Extract Function Declarations into Stanza Syntax 
-  
+class FuncDeclVisitor(c_ast.NodeVisitor):
+  """ Extract Function Declarations into Stanza Syntax
+
   This code will extract the function declarations and then
   output them in either `static`, `dynamic`, or `both`
 
-  Static Form:  
+  Static Form:
     extern func_to_use : (int) -> int
 
   Dynamic Form:
@@ -337,10 +337,10 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
       val ret = call-c [p_func_to_use](v)
       return ret
 
-  Both Form: 
+  Both Form:
     This form uses a compile time flag to differentiate between
     the two.
-  
+
   #if-defined COMPILE-STATIC:
     extern func_to_use : (int) -> int
 
@@ -363,16 +363,16 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
 
   # NOTE - the pycparser fake headers don't handle
   #   conversion of stdint.h types well, so I'm
-  #   implementing a better mapping here. 
-  #  
+  #   implementing a better mapping here.
+  #
   #   The keys in this mapping are standard C type definitions.
-  #   The values in this mapping should all be lbstanza primitives. 
+  #   The values in this mapping should all be lbstanza primitives.
   #     The exceptions to this is for struct definitions (not struct ptrs, they are ptr<?>)
   #        and function pointer typedefs (not declarations).
   #     The struct definitions will use 'struct' as keyword. This is necessary because
-  #        currently lbstanza doesn't handle passing struct by value. 
-  #     The function pointers will use 'funcdef'. This will make reference to the 
-  #        `self._funcdef` dict that will contain more info about that particular 
+  #        currently lbstanza doesn't handle passing struct by value.
+  #     The function pointers will use 'funcdef'. This will make reference to the
+  #        `self._funcdef` dict that will contain more info about that particular
   #        function pointer.
   FIXED_TYPE_MAPPING = {
     "double" : "double",
@@ -392,22 +392,22 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
     "int32_t" : "int",
     "uint64_t" : "long",
     "int64_t" : "long",
-    # What to do with `short` and `ushort` ? 
+    # What to do with `short` and `ushort` ?
     "short" : "int",
     "ushort" : "int",
   }
 
-  FIXED_PTR_MAPPING = { 
+  FIXED_PTR_MAPPING = {
     "char" : "byte",
     "void" : "?",
     # This only affects pointers to structures
-    #   if it is a struct by value - then we 
-    #   have to handle it a different way. 
+    #   if it is a struct by value - then we
+    #   have to handle it a different way.
     "struct" : "?",
   }
 
-  def __init__(self, opts): 
-    self._opts = opts    
+  def __init__(self, opts):
+    self._opts = opts
     super().__init__()
     self.parent = None
 
@@ -450,34 +450,34 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
     store[name] = lbType
     logging.debug("{}: Captured FuncDef: {}".format(node.coord, name))
 
-    # Now we need to extract the function declaration - parameters and 
+    # Now we need to extract the function declaration - parameters and
     #   return arguments.
     args = self.get_args(fdef)
     retType = self.get_retType(fdef)
 
     self._fdefs[name] = (args, retType, fdef)
 
-  def funcdef_to_stanza(self, data): 
-    args, retData, *others = data 
+  def funcdef_to_stanza(self, data):
+    args, retData, *others = data
     retType, *_ = retData
     argStr = ",".join([v[2] for k,v in args.items()])
     ret = "( ({}) -> {} )".format(argStr, retType)
     return ret
 
-  def capture_typedef(self, node): 
-    """ Traverse the node tree to determine the type of 
-    declaration is expressed by this node. 
+  def capture_typedef(self, node):
+    """ Traverse the node tree to determine the type of
+    declaration is expressed by this node.
     This compresses pointer types into a number of levels
       of redirection.
     """
-    param = node 
+    param = node
     numPtrs = 0
-    while True: 
-      if type(param.type) is c_ast.TypeDecl: 
+    while True:
+      if type(param.type) is c_ast.TypeDecl:
         baseNode = param.type.type
-        if type(baseNode) is c_ast.Struct: 
+        if type(baseNode) is c_ast.Struct:
           # This needs to be handled specially because
-          #   stanza can't handle passing structs by value yet.  
+          #   stanza can't handle passing structs by value yet.
           lbType = "struct"
           if numPtrs > 0 :
             lbType = self.convert_ptr_type(lbType, numPtrs)
@@ -491,13 +491,13 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
         elif type(baseNode) is c_ast.IdentifierType:
           baseType = baseNode.names[-1]
           # Attempt to convert to lbtype - and if that
-          #  doesn't work return the baseType - we will 
-          #  attempt a lookup later. 
+          #  doesn't work return the baseType - we will
+          #  attempt a lookup later.
           lbType = self._types.get(baseType)
           if lbType is None:
             # This type is referencing a type we don't know about yet - that
-            # is a little strange. 
-            raise RuntimeError("{}: Unhandled declaration base: {}".format(node.coord, baseNode))  
+            # is a little strange.
+            raise RuntimeError("{}: Unhandled declaration base: {}".format(node.coord, baseNode))
           if numPtrs > 0:
             lbType = self.convert_ptr_type(lbType, numPtrs)
 
@@ -508,11 +508,11 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
 
           self._types[param.type.declname] = lbType
           logging.debug("{}: Captured Identifier: {} = {}".format(node.coord, param.type.declname, lbType))
-        elif type(baseNode) is c_ast.Enum: 
+        elif type(baseNode) is c_ast.Enum:
           existing = self._enums.get(baseNode.name)
-          if existing is not None: 
+          if existing is not None:
             logging.info("{}: Ignoring Existing Enum: {}".format(node.coord, baseNode.name))
-            return 
+            return
           # Need to capture as an int
           self._types[param.type.declname] = "int"
           # But the function definition we will likely want
@@ -539,14 +539,14 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
       else:
         raise RuntimeError("{}: Unhandled Node in Declaration: {}".format(node.coord, node))
 
-  def visit_Typedef(self, node): 
-    # We use this to capture the type declarations and 
+  def visit_Typedef(self, node):
+    # We use this to capture the type declarations and
     #  Store a mapping of how translate these from C to Stanza
     #  Stanza has only a hand ful of types and so there is a need to
-    #  handle conversion properly. 
+    #  handle conversion properly.
     self.capture_typedef(node)
-    
-  def visit_Decl(self, node): 
+
+  def visit_Decl(self, node):
     if type(node.type) is c_ast.FuncDecl:
       if node.name in self._funcs:
         logging.info("{}: Ignoring Existing Function Decl: {}".format(node.coord, node.name))
@@ -564,7 +564,7 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
         return
       self._types[node.name] = "struct"
       logging.debug("{}: Captured Struct Decl '{}' as Dummy Definition".format(node.coord, node.name))
-    else: 
+    else:
       logging.warn("Unhandled Decl: {} type={}".format(node.name, node.type))
 
 
@@ -577,7 +577,7 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
         lbType = self._types.get(baseType)
         if lbType is None:
           raise ValueError("Failed to Find Type Mapping for TypeDecl '{}'".format(baseType))
-        if "funcdef" in lbType: 
+        if "funcdef" in lbType:
           fdef = self._fdefs[baseType]
           fptrDecl = self.funcdef_to_stanza(fdef)
           lbType = lbType.replace("funcdef", fptrDecl)
@@ -588,7 +588,7 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
       elif type(p.type) is c_ast.IdentifierType:
         baseType = p.type.names[-1]
         lbType = self._types.get(baseType)
-        if lbType is None: 
+        if lbType is None:
           raise ValueError("Failed to Find Type Mapping for Identifier '{}'".format(baseType))
         # @NOTE - this is primarily for parsing functions
         #   that return void.
@@ -599,12 +599,12 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
 
   def fix_arg_name(self, name, argMap):
     """ Stanza has some keywords that can't be used as variable names
-      like `val`, `when`, etc. This function inspects the 
+      like `val`, `when`, etc. This function inspects the
     """
 
     if name is not None and name not in LBStanzaExporter.RESERVED_WORDS:
       return name
-    
+
     if name is None:
       name = "missing_name"
 
@@ -617,9 +617,9 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
 
   def get_args(self, n):
     ret = OrderedDict()
-    for p in n.args.params: 
+    for p in n.args.params:
       name, lbType, numPtrs = self.get_decl(p)
-        
+
       if lbType == "void" and numPtrs == 0:
         # C functions with signature `int somefunc(void)` don't have any
         #  arguments so we just skip this.
@@ -640,17 +640,17 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
     name, lbType, numPtrs = self.get_decl(n)
     isVoid = False
     if lbType == "void" and numPtrs == 0:
-      # Stanza can't handle void return - it has to be 
+      # Stanza can't handle void return - it has to be
       #  int
       retType = "int"
       isVoid = True
     else:
-      if numPtrs > 0: 
+      if numPtrs > 0:
         retType = self.convert_ptr_type(lbType, numPtrs)
       else:
         retType = lbType
     return retType, isVoid
-    
+
   def dump_types(self):
     from pprint import pprint
     print("Enums:")
@@ -658,7 +658,7 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
     print("Types:")
     pprint(self._types)
     print("FuncDefs:")
-    
+
     pprint([ (k,v[:2]) for k,v in self._fdefs.items()])
     print("Funcs:")
     fNames = list(self._funcs.keys())
@@ -706,11 +706,11 @@ class EnumVisitor(c_ast.NodeVisitor):
         yield (name, currValue)
       else:
         try:
-          # Sometimes this value can be set to a negative value 
-          #  and when that happens we get a `UnaryOp` node for the minus sign. 
-          #  Unfortunately, that opens up a bit of a bag of worms - 
-          #    do we use the AST to change this into python math and then 
-          #    compute the value ? 
+          # Sometimes this value can be set to a negative value
+          #  and when that happens we get a `UnaryOp` node for the minus sign.
+          #  Unfortunately, that opens up a bit of a bag of worms -
+          #    do we use the AST to change this into python math and then
+          #    compute the value ?
           obj = value.value
           if type(obj) is c_ast.Constant:
             currValue = int(obj.value, base=0)
@@ -728,7 +728,7 @@ class EnumVisitor(c_ast.NodeVisitor):
 
       currValue += 1
 
-  def is_well_formed(self, enumerators): 
+  def is_well_formed(self, enumerators):
     """ This function attempts to determine whether the enumerators
     for this C enum are well formed. In this context, well-formed means:
       - Enumerators start at value 0
@@ -736,7 +736,7 @@ class EnumVisitor(c_ast.NodeVisitor):
       - Enumerators always increment by one for the next value (ie, there
          are no gaps.)
     """
-    for i, e in enumerate(enumerators): 
+    for i, e in enumerate(enumerators):
       eName, v = e
       if i != v:
         return False
@@ -756,7 +756,7 @@ class EnumVisitor(c_ast.NodeVisitor):
 
     if declName in self._enums.keys():
       logging.info("Ignoring Duplicate Enum: {}".format(declName))
-      return 
+      return
 
     enumerators = list(self.gen_enumerators(declType))
     wellFormed = self.is_well_formed(enumerators)
@@ -801,26 +801,26 @@ def process_enums(opts):
 
 def setup_opts():
   desc = """
-  LBStanza C Wrapper Generator 
+  LBStanza C Wrapper Generator
 
   This tool is used to generate wrappers around a C library (static or dynamic).
 
   This tool uses 'pycparser'. As such, you should follow instructions defined in
   that project for using the C preprocessor to message headers before feeding them
-  to this tool (eg, 'gcc -E -std=c99 headers.h' ). 
+  to this tool (eg, 'gcc -E -std=c99 headers.h' ).
 
-  Function Declaration Generator 
+  Function Declaration Generator
   ------------------------------
 
   This sub-command will generate all the exported C function declarations
-  as stanza external declarartions. 
+  as stanza external declarartions.
 
-  Static: 
+  Static:
     Generates the static extern definitions
     extern some_func : (int, int) -> int
-  
+
   Dynamic
-    Generates the dynamic shared library import format. 
+    Generates the dynamic shared library import format.
 
     EXAMPLE:
 
@@ -834,34 +834,34 @@ def setup_opts():
               return(fpath)
             (x:False):
               return(DEF_LIB_PATH)
-      
+
       val shlibPath = get-shared-lib()
       val shlib = dynamic-library-open(shlibPath)
-      
-      lostanza val p_SomeFunc: ptr<(int -> ptr<?>)> = 
+
+      lostanza val p_SomeFunc: ptr<(int -> ptr<?>)> =
         dynamic-library-symbol(shlib, String("SomeFunc")).address
 
       public lostanza defn w_SomeFunc (v:int) -> ptr<?> :
         val ret = call-c [p_SomeFunc](v)
         return ret
 
-  Both 
+  Both
     Generates both formats but with a compile time flag.
 
   Enum Generator
   --------------
-  This sub-command will generate a stanza Enum definition for each 
-  C-enum declaration. 
+  This sub-command will generate a stanza Enum definition for each
+  C-enum declaration.
 
   For well-formed C-enums - this code will use the `defenum` construct
   in stanza. "Well-Formed" in this context means values start at zero and
-  increase monotonically without gaps. 
+  increase monotonically without gaps.
   For non-"Well-Formed" C-enums, this will generate a backup implementation
-  that is not as pretty or performant. 
+  that is not as pretty or performant.
   """
   parser = argparse.ArgumentParser(description=desc, formatter_class=argparse.RawDescriptionHelpFormatter)
   parser.add_argument("-i", "--input", type=str, help="Path to the header file that will be parsed for function declarations")
-  parser.add_argument("-I", "--include", action="append", default=[], help="Add an additional search path for headers. This arg can be used multiple times.")  
+  parser.add_argument("-I", "--include", action="append", default=[], help="Add an additional search path for headers. This arg can be used multiple times.")
 
   sub = parser.add_subparsers(help="Extraction Operations")
 
