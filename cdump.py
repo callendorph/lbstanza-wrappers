@@ -2,7 +2,7 @@ from pycparser import parse_file, c_parser, c_ast
 import argparse
 
 def setup_opts() :
-  desc = """ Helper tool to dump the C AST from a particular file. This can help 
+  desc = """ Helper tool to dump the C AST from a particular file. This can help
   debug transformations of C to other languages.
   """
   parser = argparse.ArgumentParser(description=desc)
