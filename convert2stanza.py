@@ -4,13 +4,14 @@ import os
 import os.path
 import sys
 import logging
+import pkg_resources
 from collections import OrderedDict
 from contextlib import contextmanager
 
 from pycparser import c_parser, c_ast, parse_file
 import pycparser_fake_libc
 
-__version__ = "0.2.0"
+__version__ = pkg_resources.require("lbstanza-wrappers")[0].version
 
 class Exporter(object):
 
