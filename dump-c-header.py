@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from pycparser import parse_file, c_parser, c_ast
 import argparse
 

@@ -1,21 +1,21 @@
-# LBStanza C-Wrapper Tools 
+# LBStanza C-Wrapper Tools
 
-This project contains some python tools for making wrappers around C libraries in stanza. The idea is to convert the C syntax into something that stanza can read and process. 
+This project contains some python tools for making wrappers around C libraries in stanza. The idea is to convert the C syntax into something that stanza can read and process.
 
-These tools are based on [pycparser](https://github.com/eliben/pycparser). 
+These tools are based on [pycparser](https://github.com/eliben/pycparser).
 
-## Setup 
+## Setup
 
 ```
-sudo apt install python3-venv 
+sudo apt install python3-venv
 python -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt 
+pip install -r requirements.txt
 ```
 
-## Examples 
+## Examples
 
-Extract an Enumerated Type in C: 
+Extract an Enumerated Type in C:
 
 Example Header: [libtidy](https://github.com/htacg/tidy-html5/blob/a873a190e10227c47c675b8c89e6619659784db9/include/tidyenum.h#L692)
 
@@ -30,8 +30,8 @@ typedef enum
 
 ```
 
-First pass this though the C PREPROCESSOR so that we get rid of 
-symbols and things that the `pycparser` can't handle: 
+First pass this though the C PREPROCESSOR so that we get rid of
+symbols and things that the `pycparser` can't handle:
 
 ```
 gcc -E -std=c99 ./tidy-html5/include/tidyenum.h > header.h
@@ -39,10 +39,10 @@ gcc -E -std=c99 ./tidy-html5/include/tidyenum.h > header.h
 
 Then we can run the tool:
 ```
-python convert.py --input header.h enums --out-dir ./temp --pkg-prefix "tidy/Enums"
+convert2stanza.py --input header.h enums --out-dir ./temp --pkg-prefix "tidy/Enums"
 ```
 
-This will create a file `./temp/TidyOptionType.stanza` (among others) containing: 
+This will create a file `./temp/TidyOptionType.stanza` (among others) containing:
 
 ```
 defpackage tidy/Enums/TidyOptionType :
@@ -77,7 +77,3 @@ defmethod print (o:OutputStream, v:TidyOptionType) :
 ```
 
 See [lbstanza-tidy](https://github.com/callendorph/lbstanza-tidy)
-
-
-
-
