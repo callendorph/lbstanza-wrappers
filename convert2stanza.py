@@ -93,16 +93,12 @@ class FuncDeclExporter(LBStanzaExporter):
       funcType = self.gen_func_type(argsList, retType)
       self.lprint("extern {} : {}{}".format(name, funcType, voidComment))
 
-  def dump_wrapper(self, funcs, deref=False):
+  def dump_wrapper(self, funcs):
     """ Generate the wrapper lostanza function that is used to make
     consistent calling interface from high stanza code.
     @note: These functions have the `w_` prefix.
-    @param deref - selects between direct call and dereferenced call.
     """
     # public lostanza defn w_func_name (v:int) -> int :
-    #   DEREF = True
-    #   val ret = call-c [p_func_name](v)
-    #   DEFER = FALSE
     #   val ret = call-c func_name(v)
     #   return ret
 
@@ -125,93 +121,19 @@ class FuncDeclExporter(LBStanzaExporter):
         retPrefix = "val ret = "
         if isVoid:
           retPrefix = ""
-        if deref:
-          self.lprint("{}call-c [p_{}]({})".format(retPrefix, name, fArgs))
-        else:
-          self.lprint("{}call-c {}({})".format(retPrefix, name, fArgs))
-        # @NOTE - here it would be nice to be able to know if
-        #   this is a void or a true int return.
-        #   We could then do `return false` here and
+        self.lprint("{}call-c {}({})".format(retPrefix, name, fArgs))
         if isVoid:
           self.lprint("return false")
         else:
           self.lprint("return ret")
 
-  def dump_static_wrapper(self, funcs):
-    self.dump_wrapper(funcs, deref=False)
-
-  def dump_dynamic_wrapper(self, funcs):
-    self.dump_wrapper(funcs, deref=True)
-
-  def dump_dynamic_ptr(self, funcs):
-    """ Generate the pointer address import
-    Note that these values have the `p_` prefix.
-    """
-    #   lostanza val p_func_name: ptr<( (int) -> int )> =
-    #     dynamic-library-symbol(lib, String("func_name")).address
-    for name, data in funcs.items():
-      argsList, retData, *others = data
-      retType, isVoid, *_ = retData
-      funcType = self.gen_func_type(argsList, retType)
-      self.lprint("lostanza val p_{}: ptr<({})> = ".format(name, funcType))
-      with self.indented():
-        self.lprint("dynamic-library-symbol(shlib, String(\"{}\")).address".format(name))
-      self.lprint("")
-
-  def dump_dynamic_lib(self, opts):
-    defName = opts.pkg_prefix
-    defName = defName.replace("/", "-")
-    varName = opts.pkg_prefix
-    varName = varName.replace("/", "_").upper()
-    lines = [
-      "val DEF_LIB_PATH = \"./lib{}.dll\"".format(defName),
-      "val ENV_LIB_PATH_NAME = \"{}_SHARED_LIB\"".format(varName),
-      ""
-      "defn get-shared-lib () -> String :",
-      "  label<String> return:",
-      "    var sharedLib = get-env(ENV_LIB_PATH_NAME)",
-      "    match(sharedLib) :",
-      "      (fpath:String) :",
-      "        return(fpath)",
-      "      (x:False):",
-      "        return(DEF_LIB_PATH)",
-      "",
-      "val shlibPath = get-shared-lib()",
-      "val shlib = dynamic-library-open(shlibPath)",
-      "",
-    ]
-    for line in lines:
-      self.lprint(line)
-
-  def dump_dynamics(self, funcs, opts):
-    self.dump_dynamic_lib(opts)
-    self.dump_dynamic_ptr(funcs)
-    self.dump_dynamic_wrapper(funcs)
-
-
-  def dump_both(self, funcs, opts):
-    """ Generate both static and dynamic imports and
-    use a compile time flag to
-    """
-    self.lprint("#if-defined(COMPILE-STATIC):")
-    with self.indented():
-      self.dump_static_decl(funcs)
-      self.dump_static_wrapper(funcs)
-    self.lprint("#else:")
-    with self.indented():
-      self.dump_dynamics(funcs, opts)
-
   def dump_func_decls(self, funcs, opts):
     self.dump_autogen_header()
-    imports = ["core", "core/dynamic-library"]
+    imports = ["core"]
     self.dump_package_decl(opts.pkg_prefix, opts.pkg_name, imports)
+    self.dump_static_decl(funcs)
+    self.dump_wrapper(funcs)
 
-    if opts.func_form == "static" :
-      self.dump_static_decl(funcs)
-    elif opts.func_form == "dynamic" :
-      self.dump_dynamics(funcs, opts)
-    elif opts.func_form == "both":
-      self.dump_both(funcs, opts)
 
 class NativeEnumExporter(LBStanzaExporter):
   """ I implemented the original enum exportation code
@@ -326,36 +248,12 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
   """ Extract Function Declarations into Stanza Syntax
 
   This code will extract the function declarations and then
-  output them in either `static`, `dynamic`, or `both`
+  output them in the following stanza form:
 
-  Static Form:
-    extern func_to_use : (int) -> int
-
-  Dynamic Form:
-    lostanza val p_func_to_use: ptr<( (int) -> int )> =
-      dynamic-library-symbol(QRLIB, String("func_to_use")).address
-
-    public lostanza defn w_func_to_use (v:int) -> int :
-      val ret = call-c [p_func_to_use](v)
-      return ret
-
-  Both Form:
-    This form uses a compile time flag to differentiate between
-    the two.
-
-  #if-defined COMPILE-STATIC:
     extern func_to_use : (int) -> int
 
     public lostanza defn w_func_to_use (v:int) -> int :
       val ret = call-c func_to_use(v)
-      return ret
-
-  #else:
-    lostanza val p_func_to_use: ptr<( (int) -> int )> =
-      dynamic-library-symbol(QRLIB, String("func_to_use")).address
-
-    public lostanza defn w_func_to_use (v:int) -> int :
-      val ret = call-c [p_func_to_use](v)
       return ret
 
   """
@@ -583,6 +481,10 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
           fdef = self._fdefs[baseType]
           fptrDecl = self.funcdef_to_stanza(fdef)
           lbType = lbType.replace("funcdef", fptrDecl)
+          if numPtrs == 0:
+            # Z3 uses function points and functions directly as
+            #   values. This is a hack to work around. 
+            numPtrs = 1
         return p.type.declname, lbType, numPtrs
       elif type(p.type) in [c_ast.PtrDecl, c_ast.ArrayDecl]:
         numPtrs += 1
@@ -817,38 +719,17 @@ def setup_opts():
   This sub-command will generate all the exported C function declarations
   as stanza external declarartions.
 
-  Static:
-    Generates the static extern definitions
-    extern some_func : (int, int) -> int
+  1.  First it Generates the static extern definitions, eg
+     extern some_func : (int, int) -> int
+  2.  Then it dumps wrappers that handle the `call-c` invokation, eg
+     public lostanza defn w_some_func(i:int, j:int) -> int :
+       val ret = call-c some_func(i, j)
+       return ret
 
-  Dynamic
-    Generates the dynamic shared library import format.
-
-    EXAMPLE:
-
-      val DEF_LIB_PATH = "./libPREFIX.dll"
-      val ENV_LIB_PATH_NAME = "PREFIX_SHARED_LIB"
-      defn get-shared-lib () -> String :
-        label<String> return:
-          var sharedLib = get-env(ENV_LIB_PATH_NAME)
-          match(sharedLib) :
-            (fpath:String) :
-              return(fpath)
-            (x:False):
-              return(DEF_LIB_PATH)
-
-      val shlibPath = get-shared-lib()
-      val shlib = dynamic-library-open(shlibPath)
-
-      lostanza val p_SomeFunc: ptr<(int -> ptr<?>)> =
-        dynamic-library-symbol(shlib, String("SomeFunc")).address
-
-      public lostanza defn w_SomeFunc (v:int) -> ptr<?> :
-        val ret = call-c [p_SomeFunc](v)
-        return ret
-
-  Both
-    Generates both formats but with a compile time flag.
+  As of lbstanza version v0.18.10, the compiler can figure out
+  the difference between static and dynamic compiling on its own. This
+  means it no longer needs the compile-time flag hack previous
+  versions of this tool used.
 
   Enum Generator
   --------------
