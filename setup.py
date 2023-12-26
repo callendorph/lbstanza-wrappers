@@ -18,7 +18,7 @@ setup(
 	keywords="lbstanza wrappers utility",
 	author="Carl Allendorph",
 	url="https://github.com/callendorph/lbstanza-wrappers",
-	packages=[],
+	packages=["lbstanza_wrappers"],
 	install_requires=[
 		"pycparser>=2.0",
 		"pycparser-fake-libc>=2.0",
