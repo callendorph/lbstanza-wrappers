@@ -285,6 +285,8 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
 
   def get_args(self, n):
     ret = OrderedDict()
+    if n.args is None:
+      return ret
     for p in n.args.params:
       name, lbType, numPtrs = self.get_decl(p)
 
