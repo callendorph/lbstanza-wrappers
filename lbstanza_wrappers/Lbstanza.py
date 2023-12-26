@@ -137,6 +137,12 @@ class NativeEnumExporter(LBStanzaExporter):
 class EnumExporter(LBStanzaExporter):
 
   def __init__(self, fout, name, enumerators):
+    """
+    @param fout Output File Object to export to
+    @param name Name of the Enumerator Base Type
+    @param enumerators List of tuples of the form (name, value)
+      where `name` is the enumerator and 'value' is an integer
+    """
     super().__init__(fout)
     self._name = name
     self._enumerators = enumerators
