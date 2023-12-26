@@ -11,14 +11,7 @@ import subprocess as sp
 
 from lbstanza_wrappers.Lbstanza import FuncDeclExporter
 
-@contextmanager
-def open_test(fpath):
-  uutDir = os.path.dirname(fpath)
-  if not os.path.isdir(uutDir):
-    os.makedirs(uutDir)
-
-  with open(fpath, "w") as f:
-    yield f
+from .utils import open_test
 
 basic_funcs = OrderedDict()
 basic_funcs["basic_some_func"] = (
