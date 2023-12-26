@@ -1,0 +1,16 @@
+#use-added-syntax(tests)
+defpackage wrapper/tests/func_exporter:
+  import core
+
+  import wrapper/func_exporter/basic
+
+public lostanza defn w_basic_some_func_str (a:ref<Int>, b:ref<String>) -> ref<Int>:
+  val ret = w_basic_some_func(a.value, addr!(b.chars))
+  return new Int{ret}
+
+
+deftest test_basic:
+
+  val obs = w_basic_some_func_str(10, "1234")
+  #EXPECT(obs == 420)
+
