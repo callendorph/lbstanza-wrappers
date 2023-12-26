@@ -1,0 +1,11 @@
+.envrc
+tests/bin/
+tests/pkgs/
+tests/uut/
+tests/.stanza
+
+dist/
+build/
+venv/
+
+__pycache__/
