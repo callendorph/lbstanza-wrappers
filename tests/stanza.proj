@@ -1,6 +1,7 @@
 
 packages wrapper/tests/* defined-in "./stanza"
 packages wrapper/enum_exporter/* defined-in "./uut/enum_exporter"
+packages wrapper/func_exporter/* defined-in "./uut/func_exporter"
 
 
 build-test test_enum_exporter:
@@ -13,4 +14,13 @@ build-test test_native_enum_exporter:
   inputs:
     wrapper/tests/native_enum_exporter
   o: "bin/test_native_enum_exporter"
+  pkg: "pkgs"
+
+package wrapper/tests/func_exporter requires:
+  ccfiles: "./stanza/basic.c"
+
+build-test test_func_exporter:
+  inputs:
+    wrapper/tests/func_exporter
+  o: "bin/test_func_exporter"
   pkg: "pkgs"
