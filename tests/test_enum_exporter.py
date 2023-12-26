@@ -3,22 +3,12 @@ import unittest
 import os
 import os.path
 
-from contextlib import contextmanager
-
 from argparse import Namespace
 import subprocess as sp
 
 from lbstanza_wrappers.Lbstanza import EnumExporter, NativeEnumExporter
 
-@contextmanager
-def open_test(fpath):
-  uutDir = os.path.dirname(fpath)
-  if not os.path.isdir(uutDir):
-    os.makedirs(uutDir)
-
-  with open(fpath, "w") as f:
-    yield f
-
+from .utils import open_test
 
 class EnumExporterTests(unittest.TestCase):
   def test_basic(self):
