@@ -1,0 +1,16 @@
+
+packages wrapper/tests/* defined-in "./stanza"
+packages wrapper/enum_exporter/* defined-in "./uut/enum_exporter"
+
+
+build-test test_enum_exporter:
+  inputs:
+    wrapper/tests/enum_exporter
+  o: "bin/test_enum_exporter"
+  pkg: "pkgs"
+
+build-test test_native_enum_exporter:
+  inputs:
+    wrapper/tests/native_enum_exporter
+  o: "bin/test_native_enum_exporter"
+  pkg: "pkgs"

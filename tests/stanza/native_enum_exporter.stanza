@@ -1,0 +1,25 @@
+#use-added-syntax(tests)
+defpackage wrapper/tests/native_enum_exporter:
+  import core
+
+  import wrapper/enum_exporter/Faces
+  import wrapper/enum_exporter/Codes
+  import wrapper/enum_exporter/Wonky
+
+
+deftest test_native_exporter:
+
+  #EXPECT(to-int(Happy) == 0)
+  #EXPECT(to-int(Sad) == 1)
+  #EXPECT(to-int(Angry) == 2)
+
+  #EXPECT( Happy != Sad )
+  #EXPECT( Angry != Sad )
+  #EXPECT( Happy == Happy )
+
+  #EXPECT(Angry == Faces(2))
+
+  val buf = StringBuffer()
+  print(buf, Angry)
+  #EXPECT(to-string(buf) == "Angry")
+

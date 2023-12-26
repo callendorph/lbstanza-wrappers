@@ -1,0 +1,56 @@
+#use-added-syntax(tests)
+defpackage wrapper/tests/enum_exporter:
+  import core
+
+  import wrapper/enum_exporter/Colors
+  import wrapper/enum_exporter/Codes
+  import wrapper/enum_exporter/Wonky
+
+
+deftest test_basic:
+
+  #EXPECT(to-int(Red) == 0)
+  #EXPECT(to-int(Green) == 1)
+  #EXPECT(to-int(Blue) == 2)
+
+  #EXPECT( Red != Blue )
+  #EXPECT( Green != Blue )
+  #EXPECT( Green == Green )
+
+  #EXPECT(Blue == Colors(2))
+
+  val buf = StringBuffer()
+  print(buf, Red)
+  #EXPECT(to-string(buf) == "Red")
+
+deftest test_non_zero:
+
+  #EXPECT(to-int(ErrorCode) == 10)
+  #EXPECT(to-int(WarnCode) == 20)
+  #EXPECT(to-int(InfoCode) == 30)
+
+  #EXPECT( ErrorCode != WarnCode )
+  #EXPECT( InfoCode != WarnCode )
+  #EXPECT( WarnCode == WarnCode )
+
+  #EXPECT(InfoCode == Codes(30))
+
+  val buf = StringBuffer()
+  print(buf, ErrorCode)
+  #EXPECT(to-string(buf) == "ErrorCode")
+
+deftest test_negative:
+
+  #EXPECT(to-int(Jabber) == -2)
+  #EXPECT(to-int(Wocky) == -20)
+  #EXPECT(to-int(Walrus) == 3000)
+
+  #EXPECT( Jabber != Wocky )
+  #EXPECT( Walrus != Wocky )
+  #EXPECT( Walrus == Walrus )
+
+  #EXPECT(Wocky == Wonky(-20))
+
+  val buf = StringBuffer()
+  print(buf, Walrus)
+  #EXPECT(to-string(buf) == "Walrus")
