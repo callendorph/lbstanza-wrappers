@@ -498,6 +498,8 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
         #   that return void.
         return "", lbType, numPtrs
         #return "void", "int", 0
+      elif type(p.type) is c_ast.FuncDecl:
+        raise NotImplementedError("Anonymous Function pointer types not handled yet")
       else:
         raise RuntimeError("{}: Unhandled Decl Type: {}".format(param.coord, p))
 
