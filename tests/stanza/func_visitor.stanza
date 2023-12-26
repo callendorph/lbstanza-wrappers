@@ -1,0 +1,291 @@
+#use-added-syntax(tests)
+defpackage wrapper/tests/func_visitor:
+  import core
+
+  import wrapper/func_visitor/standard-externs
+
+public lostanza defn w_func_no_args_i () -> ref<Int>:
+  val ret = w_func_no_args()
+  return new Int{ret}
+
+public lostanza defn w_func_one_arg_i (a:ref<Int>) -> ref<Int>:
+  val ret = w_func_one_arg_int(a.value)
+  return new Int{ret}
+
+public lostanza defn w_func_one_arg_d (a:ref<Double>) -> ref<Int>:
+  val ret = w_func_one_arg_double(a.value)
+  return new Int{ret}
+
+public lostanza defn w_func_one_arg_f (a:ref<Float>) -> ref<Int>:
+  val ret = w_func_one_arg_float(a.value)
+  return new Int{ret}
+
+public lostanza defn w_func_one_arg_l (a:ref<Long>) -> ref<Int>:
+  val ret = w_func_one_arg_long(a.value)
+  return new Int{ret}
+
+public lostanza defn w_func_one_arg_c (a:ref<Char>) -> ref<Int>:
+  val ret = w_func_one_arg_char(a.value)
+  return new Int{ret}
+
+public lostanza defn w_func_one_arg_char_p_str (a:ref<String>) -> ref<Int>:
+  val ret = w_func_one_arg_char_p(addr!(a.chars))
+  return new Int{ret}
+
+public lostanza defn w_func_one_arg_cchar_p_str (a:ref<String>) -> ref<Int>:
+  val ret = w_func_one_arg_cchar_p(addr!(a.chars))
+  return new Int{ret}
+
+
+deftest test_standard_externs:
+  ; var obs:Int = -1
+
+  val test-vectors = [
+    [{w_func_no_args_i()}, 42]
+    [{ w_func_one_arg_i(13)}, 39]
+    [{ w_func_one_arg_d(4.2)}, 16]
+    [{w_func_one_arg_f(13.2F)}, 65]
+    [{w_func_one_arg_c('5')}, 371]
+    [{w_func_one_arg_char_p_str("1234")}, 404]
+    [{w_func_one_arg_cchar_p_str("2345")}, 618]
+  ]
+  for test-vector in test-vectors do:
+    val [func, exp] = test-vector
+    val obs = func()
+    #EXPECT(obs == exp)
+
+
+
+public lostanza defn reset_cached_val () -> ref<False> :
+  return w_reset_cached_val()
+
+public lostanza defn get_cached_val () -> ref<Int> :
+  val ret = w_get_cached_val()
+  return new Int{ret}
+
+public lostanza defn w_func_no_args_v () -> ref<False>:
+  return w_func_no_args_void()
+
+public lostanza defn w_func_one_arg_i_v (a:ref<Int>) -> ref<False>:
+  return w_func_one_arg_int_void(a.value)
+
+public lostanza defn w_func_one_arg_d_v (a:ref<Double>) -> ref<False>:
+  return w_func_one_arg_double_void(a.value)
+
+public lostanza defn w_func_one_arg_f_v (a:ref<Float>) -> ref<False>:
+  return w_func_one_arg_float_void(a.value)
+
+public lostanza defn w_func_one_arg_l_v (a:ref<Long>) -> ref<False>:
+  return w_func_one_arg_long_void(a.value)
+
+public lostanza defn w_func_one_arg_c_v (a:ref<Char>) -> ref<False>:
+  return w_func_one_arg_char_void(a.value)
+
+public lostanza defn w_func_one_arg_char_p_str_v (a:ref<String>) -> ref<False>:
+  return w_func_one_arg_char_p_void(addr!(a.chars))
+
+public lostanza defn w_func_one_arg_cchar_p_str_v (a:ref<String>) -> ref<False>:
+  return w_func_one_arg_cchar_p_void(addr!(a.chars))
+
+deftest test_standard_externs_void:
+  val test-vectors = [
+    [{w_func_no_args_v()}, -13]
+    [{ w_func_one_arg_i_v(13)}, 39]
+    [{ w_func_one_arg_d_v(4.2)}, 16]
+    [{w_func_one_arg_f_v(13.2F)}, 65]
+    [{w_func_one_arg_c_v('5')}, 371]
+    [{w_func_one_arg_char_p_str_v("1234")}, 404]
+    [{w_func_one_arg_cchar_p_str_v("2345")}, 618]
+  ]
+  for test-vector in test-vectors do:
+    val [func, exp] = test-vector
+    reset_cached_val()
+    func()
+    val obs = get_cached_val()
+    #EXPECT(obs == exp)
+
+
+public lostanza defn func_multi_arg_0 (a:ref<Int>, b:ref<Int>, c:ref<Float>) -> ref<Long>:
+  val ret = w_func_multi_arg_0(a.value, b.value, c.value)
+  return new Long{ret}
+
+public lostanza defn func_multi_arg_1 (a:ref<Long>, b:ref<Float>, c:ref<Char>) -> ref<Float>:
+  val ret = w_func_multi_arg_1(a.value, b.value, c.value)
+  return new Float{ret}
+
+public lostanza defn func_multi_arg_2 (a:ref<Double>, b:ref<Double>, c:ref<Double>) -> ref<Double>:
+  val ret = w_func_multi_arg_2(a.value, b.value, addr!(c.value))
+  return new Double{ret}
+
+; NOTE:
+;   This isn't working. I get a long stack trace from the compiler saying :
+; FATAL ERROR: No appropriate branch for arguments of type (Int).
+; in core/print-stack-trace
+;   at core/core.stanza:344.14
+; in core/fatal
+;   at core/core.stanza:397.2
+; in core/no-branch-error
+;   at core/core.stanza:274.2
+; in stz/el-to-vm/Compiler/imms!
+;   at compiler/el-to-vm.stanza:793.10
+; in stz/el-to-vm/Compiler/imm!
+;   at compiler/el-to-vm.stanza:803.13
+;  ...
+; This looks like a compiler bug.
+; public lostanza defn func_multi_arg_3 () -> ref<Double>:
+;   val cnt:long = 3
+
+;   val a*:ptr<double> = call-c clib/malloc( cnt * sizeof(double))
+;   val b*:ptr<double> = call-c clib/malloc( cnt * sizeof(double))
+;   val c*:ptr<double> = call-c clib/malloc( cnt * sizeof(double))
+
+;   val a** = addr!(a*)
+;   val b** = addr!(b*)
+;   val c** = addr!(c*)
+
+;   w_func_multi_arg_3(a**, b**, c**, cnt)
+;   val ret = 0.0
+
+;   call-c clib/free(a*)
+;   call-c clib/free(b*)
+;   call-c clib/free(c*)
+
+;   return new Double{ret}
+
+deftest test_standard_externs_multi_args:
+
+  val test-vectors = [
+    [{func_multi_arg_0(2, 3, 5.0F)}, 30L],
+    [{func_multi_arg_1(20L, 2.5F, '3')}, 2550.0F]
+    [{func_multi_arg_2(3.0, 4.0, 5.0)}, 12.0]
+    ; [{func_multi_arg_3([1.0, 2.0, 3.0], [2.0, 3.0, 4.0], [5.0, 6.0, 7.0])}, 33.0]
+    ; [{func_multi_arg_3([1.0, 2.0, 3.0], [2.0, 3.0, 4.0], [5.0, 6.0, 7.0])}, 18.9]
+    ; [{func_multi_arg_3()}, 18.9]
+
+  ]
+
+  for test-vector in test-vectors do:
+    val [func, exp] = test-vector
+    val obs = func()
+    #EXPECT(obs == exp)
+
+
+public lostanza defn func_no_arg_names (a:ref<Int>, b:ref<Long>) -> ref<Int>:
+  val ret = w_func_no_arg_names(a.value, b.value)
+  return new Int{ret}
+
+public lostanza defn func_with_void_ptr_ret (a:ref<Int>) -> ref<Long>:
+  val ret:ptr<?> = w_func_with_void_ptr_ret(a.value)
+  return new Long{ret as long}
+
+
+deftest test_standard_externs_off_sigs:
+
+  val test-vectors = [
+    [{func_no_arg_names(2, 3L)}, 89],
+    [{func_with_void_ptr_ret(7)}, 21L]
+  ]
+
+  for test-vector in test-vectors do:
+    val [func, exp] = test-vector
+    val obs = func()
+    #EXPECT(obs == exp)
+
+
+public lostanza deftype Test1 <: Equalable:
+  a:int
+  b:int
+
+lostanza defn create-test1 (a:ref<Int>, b:ref<Int>) -> ref<Test1> :
+  return new Test1{a.value, b.value}
+
+lostanza defmethod equal? (o1:ref<Test1>, o2:ref<Test1>) -> ref<True|False> :
+  val ret = (o1.a == o2.a) and (o1.b == o2.b)
+  if ret > 0:
+    return true
+  else:
+    return false
+
+; These functions are working - the FuncDeclVisitor is throwing and error:
+; Traceback (most recent call last):
+;   File "/Users/callendorph/src/lbstanza-wrappers/tests/test_func_visitor.py", line 34, in test_basic
+;     visitor.visit(node)
+;   File "/Users/callendorph/src/lbstanza-wrappers/venv2/lib/python3.11/site-packages/pycparser/c_ast.py", line 158, in visit
+;     return visitor(node)
+;            ^^^^^^^^^^^^^
+;   File "/Users/callendorph/src/lbstanza-wrappers/lbstanza_wrappers/FuncDeclVisitor.py", line 89, in generic_visit
+;     self.visit(c)
+;   File "/Users/callendorph/src/lbstanza-wrappers/venv2/lib/python3.11/site-packages/pycparser/c_ast.py", line 158, in visit
+;     return visitor(node)
+;            ^^^^^^^^^^^^^
+;   File "/Users/callendorph/src/lbstanza-wrappers/lbstanza_wrappers/FuncDeclVisitor.py", line 218, in visit_Decl
+;     argsList = self.get_args(fdef)
+;                ^^^^^^^^^^^^^^^^^^^
+;   File "/Users/callendorph/src/lbstanza-wrappers/lbstanza_wrappers/FuncDeclVisitor.py", line 291, in get_args
+;     name, lbType, numPtrs = self.get_decl(p)
+;                             ^^^^^^^^^^^^^^^^
+;   File "/Users/callendorph/src/lbstanza-wrappers/lbstanza_wrappers/FuncDeclVisitor.py", line 238, in get_decl
+;     baseType = p.type.type.names[-1]
+;                ^^^^^^^^^^^^^^^^^
+; AttributeError: 'Struct' object has no attribute 'names'
+
+; public lostanza defn test1_init_struct (obj:ref<Test1>) -> ref<Int>:
+;   val ret = w_test1_init_struct(addr!(obj))
+;   return new Int{ret}
+
+; public lostanza defn test1_add (obj:ref<Test1>, a:ref<Int>) -> ref<Int>:
+;   val ret = w_test1_add(addr!(obj), a.value)
+;   return new Int{ret}
+
+; public lostanza defn test1_copy (obj:ref<Test1>) -> ref<Test1>:
+
+;   val ret = w_test1_copy(addr!(obj))
+;   return new Test1{ret.a, ret.b}
+
+; public lostanza defn test1_compare (obj1:ref<Test1>, obj2:ref<Test1>) -> ref<Int>:
+;   val ret = w_test1_compare(addr!(obj1), addr!(obj2))
+;   return new Int{ret}
+
+
+deftest test_standard_externs_structs_test1:
+  val o1 = create-test1(1, 2)
+  val o2 = create-test1(3, 4)
+  val test-vectors = [
+    ; [{test1_init_struct(o1)}, 3],
+    ; [{test1_add(o2, 6)}, 26]
+    ; [{test1_copy(o1)}, o1]
+    ; [{test1_compare(o1, o2)}, -1]
+  ]
+
+  for test-vector in test-vectors do:
+    val [func, exp] = test-vector
+    val obs = func()
+    #EXPECT(obs == exp)
+
+; Note that I'm not trying to use these as function pointers
+;  yet - I'm just testing to make sure the mechanics are working.
+lostanza defn get_handler (signum:ref<Long>) -> ref<Long> :
+  val ret:ptr<?> = w_get_handler(signum.value)
+  return new Long{ret as long}
+
+lostanza defn set_handler (signum:ref<Long>, handler:ref<Long>) -> ref<Long> :
+  val ret:ptr<?> = w_set_handler(signum.value, handler.value as ptr<?>)
+  return new Long{ret as long}
+
+; Not working Yet
+; lostanza defn set_handler_implicit (signum:ref<Long>, handler:ref<Long>) -> ref<Long> :
+;   val ret: = w_set_handler_implicit(signum.value, handler.value as ptr<?>)
+;   return new Long{ret}
+
+
+deftest test_standard_externs_func_ptr:
+  val test-vectors = [
+    [{get_handler(10L)}, 13L]
+    [{set_handler(3L, 1001L)}, 1010L]
+    ; [{set_handler_implicit(21L, 80L)}, 227L]
+  ]
+
+  for test-vector in test-vectors do:
+    val [func, exp] = test-vector
+    val obs = func()
+    #EXPECT(obs == exp)
