@@ -344,7 +344,13 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
     if self._opts.dry_run:
       fout = sys.stdout
     else:
-      fout = open(self._opts.output, "w")
+      if isinstance(self._opts.output, str):
+        fout = open(self._opts.output, "w")
+      else:
+        # Unit Tests pass a File object directly
+        #  so that we can more easily output the result
+        #  to the desired location or a string buffer.
+        fout = self._opts.output
 
     exp = FuncDeclExporter(fout)
     exp.dump_func_decls(self._funcs, self._opts)
