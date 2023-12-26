@@ -2,6 +2,7 @@
 packages wrapper/tests/* defined-in "./stanza"
 packages wrapper/enum_exporter/* defined-in "./uut/enum_exporter"
 packages wrapper/func_exporter/* defined-in "./uut/func_exporter"
+packages wrapper/func_visitor/* defined-in "./uut/func_visitor"
 
 
 build-test test_enum_exporter:
@@ -23,4 +24,13 @@ build-test test_func_exporter:
   inputs:
     wrapper/tests/func_exporter
   o: "bin/test_func_exporter"
+  pkg: "pkgs"
+
+package wrapper/tests/func_visitor requires:
+  ccfiles: "./stanza/standard_externs.c"
+
+build-test test_func_visitor:
+  inputs:
+    wrapper/tests/func_visitor
+  o: "bin/test_func_visitor"
   pkg: "pkgs"
