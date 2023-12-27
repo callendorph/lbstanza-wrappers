@@ -77,3 +77,92 @@ defmethod print (o:OutputStream, v:TidyOptionType) :
 ```
 
 See [lbstanza-tidy](https://github.com/callendorph/lbstanza-tidy)
+
+# Tests
+
+There is a unit test suite that will attempt to use the python script
+to extract C header content into `stanza` code and then run the `stanza` compile
+on the resultant code. These tests cover the full loop from C header to running
+stanza code.
+
+## Setup
+
+You will need the `stanza` compiler on your PATH. [Download here](https://lbstanza.org/downloads.html). Use
+version 0.18.10 or higher. Check you are setup correctly with `stanza version`
+
+You will need to setup the python venv as described above.
+
+I ran into a funny issue where if I put my `.stanza` config in the root directory, it would not
+build the stanza test project because it would look for `stanza.proj` in the root. I instead
+put it in `tests/.stanza` and then this worked fine. If you have your `.stanza` in `$HOME` this
+may be a non-issue.
+
+## Running the Tests:
+
+```
+$> ./run_tests.sh
+Build target test_enum_exporter is already up-to-date.
+[Test 1] test_basic
+[PASS]
+
+[Test 2] test_non_zero
+[PASS]
+
+[Test 3] test_negative
+[PASS]
+
+Tests Finished: 3/3 tests passed. 0 tests skipped. 0 tests failed.
+
+Longest Running Tests:
+[PASS] test_basic (58 us)
+[PASS] test_negative (12 us)
+[PASS] test_non_zero (11 us)
+.Build target test_native_enum_exporter is already up-to-date.
+[Test 1] test_native_exporter
+[PASS]
+
+Tests Finished: 1/1 tests passed. 0 tests skipped. 0 tests failed.
+
+Longest Running Tests:
+[PASS] test_native_exporter (61 us)
+.Build target test_func_exporter is already up-to-date.
+[Test 1] test_basic
+[PASS]
+
+Tests Finished: 1/1 tests passed. 0 tests skipped. 0 tests failed.
+
+Longest Running Tests:
+[PASS] test_basic (8 us)
+.[Test 1] test_standard_externs
+[PASS]
+
+[Test 2] test_standard_externs_void
+[PASS]
+
+[Test 3] test_standard_externs_multi_args
+[PASS]
+
+[Test 4] test_standard_externs_off_sigs
+[PASS]
+
+[Test 5] test_standard_externs_structs_test1
+[PASS]
+
+[Test 6] test_standard_externs_func_ptr
+[PASS]
+
+Tests Finished: 6/6 tests passed. 0 tests skipped. 0 tests failed.
+
+Longest Running Tests:
+[PASS] test_standard_externs (67 us)
+[PASS] test_standard_externs_void (9 us)
+[PASS] test_standard_externs_multi_args (9 us)
+[PASS] test_standard_externs_off_sigs (6 us)
+[PASS] test_standard_externs_func_ptr (3 us)
+[PASS] test_standard_externs_structs_test1 (2 us)
+.
+----------------------------------------------------------------------
+Ran 4 tests in 4.440s
+
+OK
+```
