@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import os
 import pkg_resources
 
 from pycparser import parse_file
@@ -9,6 +10,11 @@ from lbstanza_wrappers.EnumVisitor import EnumVisitor
 from lbstanza_wrappers.FuncDeclVisitor import FuncDeclVisitor
 
 __version__ = pkg_resources.require("lbstanza-wrappers")[0].version
+
+import logging
+logging.basicConfig(
+  level=os.environ.get('PY_LOGLEVEL', 'INFO').upper()
+)
 
 
 def prep_args(opts):
@@ -71,6 +77,15 @@ def setup_opts():
   increase monotonically without gaps.
   For non-"Well-Formed" C-enums, this will generate a backup implementation
   that is not as pretty or performant.
+
+  Logging
+  -------
+
+  You can set the environment variable "PY_LOGLEVEL" to a string to control
+  the logging level. Example:
+
+  PY_LOGLEVEL=DEBUG convert2stanza.py ...
+
   """
   parser = argparse.ArgumentParser(description=desc, formatter_class=argparse.RawDescriptionHelpFormatter)
   parser.add_argument("-i", "--input", type=str, help="Path to the header file that will be parsed for function declarations")
