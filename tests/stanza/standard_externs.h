@@ -11,6 +11,14 @@ extern int func_one_arg_char(char a);
 extern int func_one_arg_char_p(char *a);
 extern int func_one_arg_cchar_p(const char *a);
 
+/* Type Modifiers */
+extern long int func_one_arg_long_mod_ret(int a);
+extern int func_one_long_mod_arg(long int a);
+
+extern short int func_one_arg_short_mod_ret(int a);
+extern int func_one_short_mod_arg(short int a);
+
+
 /* Helpers for extracting the values from the functions
    that return void. */
 extern void reset_cached_val();
@@ -40,19 +48,16 @@ extern void *func_with_void_ptr_ret(long);
  Bug in python code - need to fix before these will run and work
  */
 
-/*
 struct test1 {
   int a;
   int b;
 };
-*/
 
-/*
 extern int test1_init_struct(struct test1 *obj);
 extern int test1_add(struct test1 *obj, int a);
 extern struct test1 *test1_copy(struct test1 *obj);
 extern int test1_compare(struct test1 *obj1, struct test1 *obj2);
-*/
+
 
 /* Function Pointer Tests
 */
@@ -63,9 +68,7 @@ typedef void (*SignalHandler)(long signum);
 extern SignalHandler get_handler(long signum);
 extern SignalHandler set_handler(long signum, SignalHandler handler);
 
-/* Implicit (Anonymous) Function Pointers
-Not Working Yet
+/* Implicit (Anonymous) Function Pointers */
 extern long set_handler_implicit(long signum, void (*)(long));
-*/
 
 #endif

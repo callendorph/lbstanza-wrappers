@@ -50,6 +50,22 @@ int func_one_arg_cchar_p(const char *a) {
   return ret * 3;
 }
 
+long int func_one_arg_long_mod_ret(int a) {
+  return (long)(a * 61);
+}
+
+int func_one_long_mod_arg(long int a) {
+  return (int)(a * 2);
+}
+
+short int func_one_arg_short_mod_ret(int a) {
+  return (short)(a * 3);
+}
+
+int func_one_short_mod_arg(short int a) {
+  return (int)(a * 5);
+}
+
 static int _LOCAL = -1;
 
 void reset_cached_val() {
@@ -134,26 +150,26 @@ void *func_with_void_ptr_ret(long a) {
 
 /** Basic Structs */
 
-// int test1_init_struct(struct test1 *obj) {
-//   return (obj->a + obj->b );
-// }
+int test1_init_struct(struct test1 *obj) {
+  return (obj->a + obj->b );
+}
 
-// int test1_add(struct test1 *obj, int a) {
-//   obj->a += a;
-//   return 2 * (obj->a + obj-b);
-// }
+int test1_add(struct test1 *obj, int a) {
+  obj->a += a;
+  return 2 * (obj->a + obj->b);
+}
 
-// struct test1 *test1_copy(struct test1 *obj) {
-//   return obj;
-// }
+struct test1 *test1_copy(struct test1 *obj) {
+  return obj;
+}
 
-// int test1_compare(struct test1 *obj1, struct test1 *obj2) {
-//   if ( obj1->a > obj2->a ) {
-//     return 1;
-//   } else {
-//     return -1;
-//   }
-// }
+int test1_compare(struct test1 *obj1, struct test1 *obj2) {
+  if ( obj1->a > obj2->a ) {
+    return 1;
+  } else {
+    return -1;
+  }
+}
 
 /* Function Pointer - Basics*/
 
