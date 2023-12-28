@@ -1,28 +1,16 @@
-import os
 import logging
 import sys
 from collections import OrderedDict
 from pycparser import c_ast
 
 from lbstanza_wrappers.Lbstanza import FuncDeclExporter, LBStanzaExporter
+from lbstanza_wrappers.CDefIR import *
 
 class FuncDeclVisitor(c_ast.NodeVisitor):
-  """ Extract Function Declarations into Stanza Syntax
-
-  This code will extract the function declarations and then
-  output them in the following stanza form:
-
-    extern func_to_use : (int) -> int
-
-    public lostanza defn w_func_to_use (v:int) -> int :
-      val ret = call-c func_to_use(v)
-      return ret
-
+  """ Extract the Type Declarations into an Intermediate store.
+  This class is intended to be a first pass for extracting function
+  declarations. The idea is to just extract the
   """
-  STANZA_PRIMS = [
-    "double", "float", "int", "long", "byte"
-  ]
-
   # NOTE - the pycparser fake headers don't handle
   #   conversion of stdint.h types well, so I'm
   #   implementing a better mapping here.
@@ -57,74 +45,104 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
     # What to do with `short` and `ushort` ?
     "short" : "int",
     "ushort" : "int",
-  }
 
-  FIXED_PTR_MAPPING = {
-    "char" : "byte",
-    "void" : "?",
-    # This only affects pointers to structures
-    #   if it is a struct by value - then we
-    #   have to handle it a different way.
-    "struct" : "?",
+    "long int" : "long",
+    "short int" : "int",
+    # Stanza Doesn't really differentiate
+    "unsigned int" : "int",
+    "signed int" : "int",
+    "unsigned long" : "long",
+    "signed long" : "long",
+    "unsigned char" : "byte",
+    "signed char" : "byte",
+    "unsigned short" : "int",
+    "signed short" : "int",
+    # TODO - This is a bug - "long long" and "long" are not the same
+    "long long" : "long"
   }
 
   def __init__(self, opts):
     self._opts = opts
     super().__init__()
-    self.parent = None
 
-    self._types = dict(self.FIXED_TYPE_MAPPING)
-    self._enums = {}
-    self._fdefs = OrderedDict()
+    self._types = self._init_types()
     self._funcs = OrderedDict()
+    self.logger = None
+    self.rootNode = None
 
-
-  def generic_visit(self, node):
-    """ Called if no explicit visitor function exists for a
-        node. Implements preorder visiting of the node.
-    """
-    oldparent = self.parent
-    self.parent = node
-    for c in node:
-        self.visit(c)
-    self.parent = oldparent
-
-  def convert_ptr_type(self, lbType, numPtrs):
-    ptrType = self.FIXED_PTR_MAPPING.get(lbType, lbType)
-    prefix = "ptr<" * numPtrs
-    suffix = ">" * numPtrs
-    return prefix + ptrType + suffix
-
-  def capture_funcdef(self, node, numPtrs, fdef):
-    """ Capture a Function Pointer Definition
-    @param node
-    """
-    #import pdb; pdb.set_trace()
-    lbType = "funcdef"
-    if numPtrs > 0 :
-      lbType = self.convert_ptr_type(lbType, numPtrs)
-    store = self._types
-    name = node.name
-    existing = store.get(name)
-    if existing is not None:
-      logging.info("{}: Ignoring Existing FuncDef: {}".format(node.coord, name))
-      return
-    store[name] = lbType
-    logging.debug("{}: Captured FuncDef: {}".format(node.coord, name))
-
-    # Now we need to extract the function declaration - parameters and
-    #   return arguments.
-    args = self.get_args(fdef)
-    retType = self.get_retType(fdef)
-
-    self._fdefs[name] = (args, retType, fdef)
-
-  def funcdef_to_stanza(self, data):
-    args, retData, *others = data
-    retType, *_ = retData
-    argStr = ",".join([v[2] for k,v in args.items()])
-    ret = "( ({}) -> {} )".format(argStr, retType)
+  def _init_types(self):
+    ret = {}
+    for k,v in self.FIXED_TYPE_MAPPING.items():
+      ret[k] = Identifier(v)
     return ret
+
+  def debug(self, msg):
+    if self.rootNode is not None:
+      logging.debug("{}: {}".format(self.rootNode.coord, msg))
+    else:
+      logging.debug("UNKNOWN: {}".format(msg))
+
+  @property
+  def types(self):
+      return self._type
+
+  @property
+  def func_defs(self):
+    for name, t in self._type.items():
+      if isinstance(t, FunctionData):
+        yield name
+
+  @property
+  def enum_defs(self):
+    for name,t in self._type.items():
+      if isinstance(t, EnumArg):
+        yield name
+
+  @property
+  def struct_defs(self):
+    for name, t in self._type.items():
+      if isinstance(t, StructArg):
+        yield name
+
+  def visit_Typedef(self, node):
+    # We use this to capture the type declarations and
+    #  Store a mapping of how translate these from C to Stanza
+    #  Stanza has only a handful of types and so there is a need to
+    #  handle conversion properly.
+    self.rootNode = node
+    comps = self.capture_typedef(node)
+    if comps is not None:
+      name, lbType, *_ = comps
+
+      existing = self._types.get(name)
+      if existing is not None:
+        self.debug("Type named '{}' Already Exists - Ignoring new definition".format(name))
+        return
+
+      self._types[name] = lbType
+
+  def visit_Decl(self, node):
+    self.rootNode = node
+    numPtrs = 0
+    if type(node.type) is c_ast.FuncDecl:
+      if node.name in self._funcs:
+        logging.info("{}: Ignoring Existing Function Decl: {}".format(node.coord, node.name))
+        return
+      fdef = node.type
+      funcData = self.capture_funcdecl(fdef)
+      self._funcs[node.name] = funcData
+      logging.debug("{}: Captured Function Decl: {}".format(node.coord, node.name))
+    elif type(node.type) is c_ast.Struct:
+      declname = node.type.name
+      if declname in self._types:
+        self.debug("Type with name '{}' Already Exists - Ignoring New Struct Declaration".format(declname))
+        return
+      # @TODO - capture struct members here ?
+      lbType = ArgType(StructArg({}), 0)
+      self._types[declname] = lbType
+      self.debug("Captured Struct Decl '{}' as Dummy Definition".format(declname))
+    else:
+      self.debug("Unhandled Type: {}" % [type(node.type)])
 
   def capture_typedef(self, node):
     """ Traverse the node tree to determine the type of
@@ -138,138 +156,103 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
       if type(param.type) is c_ast.TypeDecl:
         baseNode = param.type.type
         if type(baseNode) is c_ast.Struct:
-          # This needs to be handled specially because
-          #   stanza can't handle passing structs by value yet.
-          lbType = "struct"
-          if numPtrs > 0 :
-            lbType = self.convert_ptr_type(lbType, numPtrs)
-          store = self._types
-          existing = store.get(param.type.declname)
-          if existing is not None:
-            logging.info("{}: Ignoring Existing Struct: {}".format(node.coord, param.type.declname))
-            return
-          store[param.type.declname] = lbType
-          logging.debug("{}: Captured Struct: {} = {}".format(node.coord, param.type.declname, lbType))
+          return self.capture_struct(baseNode, numPtrs, param.type.declname)
         elif type(baseNode) is c_ast.IdentifierType:
-          baseType = baseNode.names[-1]
-          # Attempt to convert to lbtype - and if that
-          #  doesn't work return the baseType - we will
-          #  attempt a lookup later.
-          lbType = self._types.get(baseType)
-          if lbType is None:
-            # This type is referencing a type we don't know about yet - that
-            # is a little strange.
-            raise RuntimeError("{}: Unhandled declaration base: {}".format(node.coord, baseNode))
-          if numPtrs > 0:
-            lbType = self.convert_ptr_type(lbType, numPtrs)
-
-          existing = self._types.get(param.type.declname)
-          if existing is not None:
-            logging.info("{}: Ignoring Existing Type: {}".format(node.coord, param.type.declname))
-            return
-
-          self._types[param.type.declname] = lbType
-          logging.debug("{}: Captured Identifier: {} = {}".format(node.coord, param.type.declname, lbType))
+          return self.capture_identifier(baseNode, numPtrs, param.type.declname)
         elif type(baseNode) is c_ast.Enum:
-          existing = self._enums.get(baseNode.name)
-          if existing is not None:
-            logging.info("{}: Ignoring Existing Enum: {}".format(node.coord, baseNode.name))
-            return
-          # Need to capture as an int
-          self._types[param.type.declname] = "int"
-          # But the function definition we will likely want
-          #  to use a type definition.
-          self._enums[param.type.declname] = [] # @TODO implement Enum List Capture
-          logging.debug("{}: Captured Enum: {}".format(node.coord, param.type.declname))
+          return self.capture_enum_typedef(baseNode, param.type.declname)
         elif type(baseNode) is c_ast.Union:
-          logging.warn("Ignoring Typedef of Base Union: {}".format(baseNode))
+          self.debug("Ignoring Typedef of Base Union: {}".format(baseNode))
         else:
-          raise RuntimeError("{}: Unhandled declaration base: {}".format(node.coord, baseNode))
-        return
-      elif type(param.type) is c_ast.PtrDecl:
+          raise RuntimeError("{}: Unhandled declaration base: {}".format(self.rootNode.coord, baseNode))
+      elif type(param.type) in [c_ast.PtrDecl, c_ast.ArrayDecl]:
         numPtrs += 1
         param = param.type
       elif type(param.type) is c_ast.IdentifierType:
         # No op - I don't think this make sense for a typedef
-        pass
+        #  - Is this an alias - like:
+        #    typedef asdf qwer
+        raise RuntimeError("{}: Unhandled Identifier Type: {}".format(node.coord, node))
       elif type(param.type) is c_ast.FuncDecl:
-        self.capture_funcdef(node, numPtrs, param.type)
-        return
-      elif type(param.type) is c_ast.ArrayDecl:
-        numPtrs += 1
-        param = param.type
+        return self.capture_funcdef(node, numPtrs, param.type)
       else:
         raise RuntimeError("{}: Unhandled Node in Declaration: {}".format(node.coord, node))
 
-  def visit_Typedef(self, node):
-    # We use this to capture the type declarations and
-    #  Store a mapping of how translate these from C to Stanza
-    #  Stanza has only a hand ful of types and so there is a need to
-    #  handle conversion properly.
-    self.capture_typedef(node)
+  def capture_struct(self, node, numPtrs, declname):
+    # Currently, I'm not capturing the struct parameters because we
+    #  don't actually use them in the wrapper generator. We generally
+    #  assumes structs are opaque types.
+    structContent = {}
+    lbType = ArgType(StructArg(structContent), numPtrs)
+    self.debug("Captured Struct: {} = {}".format(declname, lbType))
+    return (declname, lbType)
 
-  def visit_Decl(self, node):
-    if type(node.type) is c_ast.FuncDecl:
-      if node.name in self._funcs:
-        logging.info("{}: Ignoring Existing Function Decl: {}".format(node.coord, node.name))
-        return
+  def capture_identifier(self, node, numPtrs, declname):
+    baseType = " ".join(node.names[-2:])
+    # Attempt to convert to lbtype - and if that
+    #  doesn't work return the baseType - we will
+    #  attempt a lookup later.
+    aliasType = self._types.get(baseType)
+    if aliasType is None:
+      # This type is referencing a type we don't know about yet - that
+      # is a little strange.
+      raise RuntimeError("{}: Unhandled declaration base: {}".format(self.rootNode.coord, node))
 
-      fdef = node.type
-      argsList = self.get_args(fdef)
-      retType = self.get_retType(fdef)
+    lbType = ArgType(aliasType, numPtrs)
 
-      self._funcs[node.name] = (argsList, retType, fdef)
-      logging.debug("{}: Captured Function Decl: {}".format(node.coord, node.name))
-    elif type(node.type) is c_ast.Struct:
-      if node.name in self._types:
-        logging.info("{}: Ignoring Existing Struct Decl: {}".format(node.coord, node.name))
-        return
-      self._types[node.name] = "struct"
-      logging.debug("{}: Captured Struct Decl '{}' as Dummy Definition".format(node.coord, node.name))
-    else:
-      logging.warn("Unhandled Decl: {} type={}".format(node.name, node.type))
+    self.debug("Captured Identifier: {} = {}".format(declname, lbType))
 
+    return (declname, lbType)
 
-  def get_decl(self, param):
-    p = param
-    numPtrs = 0
-    while True:
-      if type(p.type) is c_ast.TypeDecl:
-        baseType = p.type.type.names[-1]
-        lbType = self._types.get(baseType)
-        if lbType is None:
-          raise ValueError("Failed to Find Type Mapping for TypeDecl '{}'".format(baseType))
-        if "funcdef" in lbType:
-          fdef = self._fdefs[baseType]
-          fptrDecl = self.funcdef_to_stanza(fdef)
-          lbType = lbType.replace("funcdef", fptrDecl)
-          if numPtrs == 0:
-            # Z3 uses function points and functions directly as
-            #   values. This is a hack to work around.
-            numPtrs = 1
-        return p.type.declname, lbType, numPtrs
-      elif type(p.type) in [c_ast.PtrDecl, c_ast.ArrayDecl]:
-        numPtrs += 1
-        p = p.type
-      elif type(p.type) is c_ast.IdentifierType:
-        baseType = p.type.names[-1]
-        lbType = self._types.get(baseType)
-        if lbType is None:
-          raise ValueError("Failed to Find Type Mapping for Identifier '{}'".format(baseType))
-        # @NOTE - this is primarily for parsing functions
-        #   that return void.
-        return "", lbType, numPtrs
-        #return "void", "int", 0
-      elif type(p.type) is c_ast.FuncDecl:
-        raise NotImplementedError("Anonymous Function pointer types not handled yet")
-      else:
-        raise RuntimeError("{}: Unhandled Decl Type: {}".format(param.coord, p))
+  def capture_enum_typedef(self, node, declname):
+    """
+    @param baseNode enumeration node - a child/grand-child of the rootNode
+    @param declname Name of the enumeration that we are trying to capture.df
+    """
+    self.debug("Captured Enum: {}".format(declname))
+    # @TODO implement Enum List Capture -
+    #  This may or may not be possible - the _enum might be defined elsewhere ?
+    enumVals = []
+    return (declname, EnumArg(enumVals))
+
+  def capture_funcdecl(self, fdef):
+    # Now we need to extract the function declaration - parameters and
+    #   return arguments.
+    args = self.get_args(fdef)
+    retType = self.get_retType(fdef)
+
+    return FunctionData(args, retType, fdef)
+
+  def capture_funcdef(self, node, numPtrs, fdef):
+    """ Capture a Function Pointer Definition
+    @param node
+    """
+    name = node.name
+    data = self.capture_funcdecl(fdef)
+
+    if numPtrs == 0:
+      # Z3 uses funny function pointer declarations. It is
+      #  almost as if the function is passed by value instead
+      #  of by pointer. See `Z3_set_error_handler`
+      #  This a hack to make this work with Stanza's expectation
+      #  of how to pass a function pointer.
+      numPtrs += 1
+
+    lbType = ArgType(data, numPtrs)
+
+    self.debug("Captured FuncDef: {} NumPtrs: {}".format(name, numPtrs))
+    return (name, lbType)
 
   def fix_arg_name(self, name, argMap):
     """ Stanza has some keywords that can't be used as variable names
-      like `val`, `when`, etc. This function inspects the
+      like `val`, `when`, etc. This function inspects the name of an
+      argument and then constructs a new variable name that doesn't collide
+      with stanza reserved words.
+    @param name of the argument or declaration
+    @param argMap Existing re-mapped arguments - to check that we don't
+      create an overlap.
+    @return [String] new name
     """
-
     if name is not None and name not in LBStanzaExporter.RESERVED_WORDS:
       return name
 
@@ -284,52 +267,99 @@ class FuncDeclVisitor(c_ast.NodeVisitor):
     return newName
 
   def get_args(self, n):
+    """ Extract the arguments from a function definition.
+    The function arguments are encoded in a `ParamList` object - See here:
+      https://github.com/eliben/pycparser/blob/f7409953060f1f4d0f8988f1e131a49f84c95eba/pycparser/c_ast.py#L831
+    @param n Func Declaration Node that we are attempting to parse
+    @return OrderedDict of:
+      Key => Name of the argument
+      Value = Tuple of (lbType, numPtrs, completeType) where:
+        lbType => Base stanza type extracted from the C type
+        numPtrs => Number of * pointers in the declaration
+        completeType => Fully formatted type including any `ptr<>`
+          decorators.
+    """
     ret = OrderedDict()
     if n.args is None:
       return ret
     for p in n.args.params:
-      name, lbType, numPtrs = self.get_decl(p)
+      name, argType = self.get_decl(p)
 
-      if lbType == "void" and numPtrs == 0:
+      if argType.lbType.to_stanza() == "void" and argType.numPtrs == 0:
         # C functions with signature `int somefunc(void)` don't have any
         #  arguments so we just skip this.
         continue
 
-      if numPtrs > 0 :
-        completeType = self.convert_ptr_type(lbType, numPtrs)
-      else:
-        completeType = lbType
-
       name = self.fix_arg_name(name, ret)
 
-      ret[name] = (lbType, numPtrs, completeType)
+      ret[name] = argType
 
     return ret
 
   def get_retType(self, n):
-    name, lbType, numPtrs = self.get_decl(n)
+    """ Get the return type for function definition
+    @param n Function Declaration Node
+    """
+    name, lbType = self.get_decl(n)
     isVoid = False
-    if lbType == "void" and numPtrs == 0:
+    if lbType.to_stanza() == "void" and lbType.numPtrs == 0:
       # Stanza can't handle void return - it has to be
       #  int
-      retType = "int"
+      lbType = Identifier("int")
       isVoid = True
-    else:
-      if numPtrs > 0:
-        retType = self.convert_ptr_type(lbType, numPtrs)
+
+    return ReturnType(lbType, isVoid)
+
+  def get_decl(self, param):
+    """ Extract a declaration type from one of the args to a C function.
+    This function is about extracting the type declarations we have
+    already captured and presenting them for use by a function
+    def or declaration.
+    @param param
+    @return tuple of Name, Stanzable
+    """
+    p = param
+    numPtrs = 0
+    while True:
+      if type(p.type) is c_ast.TypeDecl:
+        baseNode = p.type.type
+        try:
+          baseType = baseNode.name
+        except AttributeError:
+          baseType = " ".join(baseNode.names[-2:])
+
+        lbType = self._types.get(baseType)
+        if lbType is None:
+          raise ValueError("Failed to Find Type Mapping for TypeDecl '{}'".format(baseType))
+
+        return (p.type.declname, ArgType(lbType, numPtrs))
+      elif type(p.type) in [c_ast.PtrDecl, c_ast.ArrayDecl]:
+        numPtrs += 1
+        p = p.type
+      elif type(p.type) is c_ast.IdentifierType:
+        baseType = p.type.names[-1]
+        lbType = self._types.get(baseType)
+        if lbType is None:
+          raise ValueError("{}: Failed to Find Type Mapping for Identifier '{}'".format(self.rootNode.coord, baseType))
+        # @NOTE - this is primarily for parsing functions
+        #   that return void.
+        return ("", ArgType(lbType, numPtrs))
+        #return "void", "int", 0
+      elif type(p.type) is c_ast.FuncDecl:
+        return self.capture_funcdef(param, numPtrs, p.type)
       else:
-        retType = lbType
-    return retType, isVoid
+        raise RuntimeError("{}: Unhandled Decl Type: {}".format(param.coord, p))
+
 
   def dump_types(self):
     from pprint import pprint
     print("Enums:")
-    pprint(self._enums)
+    pprint(list(self.enum_defs))
     print("Types:")
     pprint(self._types)
     print("FuncDefs:")
-
-    pprint([ (k,v[:2]) for k,v in self._fdefs.items()])
+    fNames = list(self.func_defs)
+    pprint(fNames)
     print("Funcs:")
     fNames = list(self._funcs.keys())
     pprint(fNames)
