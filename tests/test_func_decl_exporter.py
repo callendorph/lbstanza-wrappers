@@ -9,18 +9,19 @@ from contextlib import contextmanager
 from argparse import Namespace
 import subprocess as sp
 
-from lbstanza_wrappers.Lbstanza import FuncDeclExporter
+from lbstanza_wrappers.Lbstanza import *
+from lbstanza_wrappers.CDefIR import *
 
 from .utils import open_test
 
 basic_funcs = OrderedDict()
-basic_funcs["basic_some_func"] = (
-  {
-    "a": ("int", 0, "int"),
-    "b" : ("char", 1, "ptr<byte>"),
-  },
-  ("int", False, ""),
-  "" # Not Used
+basic_funcs["basic_some_func"] = FunctionData(
+  OrderedDict({
+    "a": ArgType(Identifier("int"), 0),
+    "b" : ArgType(Identifier("char"), 1),
+  }),
+  ReturnType(ArgType(Identifier("int"), 0), False),
+  None
 )
 
 

@@ -1,6 +1,6 @@
-
 from lbstanza_wrappers.Exporter import Exporter
 from lbstanza_wrappers import __version__
+
 
 class LBStanzaExporter(Exporter):
   """ Exporter with utility functions
@@ -28,16 +28,10 @@ class LBStanzaExporter(Exporter):
         self.lprint("import {}".format(imp))
     self.lprint("")
 
+
 class FuncDeclExporter(LBStanzaExporter):
   """ Function Declarations Exporter
   """
-
-  def gen_func_type(self, argsList, retType):
-    """ Generate the function type declaration
-    in the form " (int, int) -> int "
-    """
-    args = ",".join([x[2] for x in argsList.values()])
-    return "({}) -> {}".format(args, retType)
 
   def dump_static_decl(self, funcs):
     """ Dump static function declarations.
@@ -46,12 +40,10 @@ class FuncDeclExporter(LBStanzaExporter):
       as symbol names.
     """
     for name, data in funcs.items():
-      argsList, retData, *others = data
-      retType, isVoid, *_ = retData
       voidComment = ""
-      if isVoid:
+      if data.ret.isVoid:
         voidComment = "  ;  void"
-      funcType = self.gen_func_type(argsList, retType)
+      funcType = data.to_stanza()
       self.lprint("extern {} : {}{}".format(name, funcType, voidComment))
 
   def dump_wrapper(self, funcs):
@@ -64,18 +56,17 @@ class FuncDeclExporter(LBStanzaExporter):
     #   return ret
 
     def to_argdecl(k,v):
-      return "{}:{}".format(k, v[2])
+      return "{}:{}".format(k, v.to_stanza())
 
     for name, data in funcs.items():
-      argsList, retData, *others = data
-      retType, isVoid, *_ = retData
-      argDecls = ", ".join([to_argdecl(k,v) for k,v in argsList.items()])
-      fArgs = ", ".join(argsList.keys())
+      argDecls = ", ".join([to_argdecl(k,v) for k,v in data.args.items()])
+      fArgs = ", ".join(data.args.keys())
 
+      isVoid = data.ret.isVoid
       if isVoid:
         retDecl = "ref<False>"
       else:
-        retDecl = retType
+        retDecl = data.ret.retType.to_stanza()
 
       self.lprint("public lostanza defn w_{} ({}) -> {} :".format(name, argDecls, retDecl))
       with self.indented():
@@ -89,6 +80,12 @@ class FuncDeclExporter(LBStanzaExporter):
           self.lprint("return ret")
 
   def dump_func_decls(self, funcs, opts):
+    """
+    @param funcs Dictionary with:
+       Key = [String] Function Symbol Name
+       Value = [Tuple] (argsList, retType, ... others ignored)
+    @param opts argparse Namespace with command line options.
+    """
     self.dump_autogen_header()
     imports = ["core"]
     self.dump_package_decl(opts.pkg_prefix, opts.pkg_name, imports)
