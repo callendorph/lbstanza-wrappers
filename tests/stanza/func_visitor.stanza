@@ -36,6 +36,23 @@ public lostanza defn w_func_one_arg_cchar_p_str (a:ref<String>) -> ref<Int>:
   val ret = w_func_one_arg_cchar_p(addr!(a.chars))
   return new Int{ret}
 
+public lostanza defn func_one_arg_long_mod_ret (a:ref<Int>) -> ref<Long> :
+  val ret = w_func_one_arg_long_mod_ret(a.value)
+  return new Long{ret}
+
+public lostanza defn func_one_long_mod_arg (a:ref<Long>) -> ref<Int> :
+  val ret = w_func_one_long_mod_arg(a.value)
+  return new Int{ret}
+
+; Stanza doesn't have a `short` type.
+public lostanza defn func_one_arg_short_mod_ret (a:ref<Int>) -> ref<Int> :
+  val ret = w_func_one_arg_short_mod_ret(a.value)
+  return new Int{ret}
+
+public lostanza defn func_one_short_mod_arg (a:ref<Int>) -> ref<Int> :
+  val ret = w_func_one_short_mod_arg(a.value)
+  return new Int{ret}
+
 
 deftest test_standard_externs:
   ; var obs:Int = -1
@@ -48,6 +65,10 @@ deftest test_standard_externs:
     [{w_func_one_arg_c('5')}, 371]
     [{w_func_one_arg_char_p_str("1234")}, 404]
     [{w_func_one_arg_cchar_p_str("2345")}, 618]
+    [{func_one_arg_long_mod_ret(13)}, 793L]
+    [{func_one_long_mod_arg(3L)}, 6]
+    [{func_one_arg_short_mod_ret(7)}, 21]
+    [{func_one_short_mod_arg(3)}, 15]
   ]
   for test-vector in test-vectors do:
     val [func, exp] = test-vector
@@ -272,17 +293,16 @@ lostanza defn set_handler (signum:ref<Long>, handler:ref<Long>) -> ref<Long> :
   val ret:ptr<?> = w_set_handler(signum.value, handler.value as ptr<?>)
   return new Long{ret as long}
 
-; Not working Yet
-; lostanza defn set_handler_implicit (signum:ref<Long>, handler:ref<Long>) -> ref<Long> :
-;   val ret: = w_set_handler_implicit(signum.value, handler.value as ptr<?>)
-;   return new Long{ret}
+lostanza defn set_handler_implicit (signum:ref<Long>, handler:ref<Long>) -> ref<Long> :
+  val ret = w_set_handler_implicit(signum.value, handler.value as ptr<?>)
+  return new Long{ret}
 
 
 deftest test_standard_externs_func_ptr:
   val test-vectors = [
     [{get_handler(10L)}, 13L]
     [{set_handler(3L, 1001L)}, 1010L]
-    ; [{set_handler_implicit(21L, 80L)}, 227L]
+    [{set_handler_implicit(21L, 80L)}, 227L]
   ]
 
   for test-vector in test-vectors do:
