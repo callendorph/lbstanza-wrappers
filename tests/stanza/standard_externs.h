@@ -59,6 +59,17 @@ extern struct test1 *test1_copy(struct test1 *obj);
 extern int test1_compare(struct test1 *obj1, struct test1 *obj2);
 
 
+typedef struct test2 {
+  long a;
+  long b;
+} test2;
+
+extern int test2_init_struct(test2 *obj);
+extern int test2_add(test2 *obj, unsigned long int a);
+extern test2 *test2_copy(test2 *obj);
+extern int test2_compare(test2 *obj1, test2 *obj2);
+
+
 /* Function Pointer Tests
 */
 
@@ -70,5 +81,14 @@ extern SignalHandler set_handler(long signum, SignalHandler handler);
 
 /* Implicit (Anonymous) Function Pointers */
 extern long set_handler_implicit(long signum, void (*)(long));
+
+/*  Z3 generates its function pointers by value instead of as
+pointers:
+*/
+typedef void Z3_error_handler (int a, int b);
+
+extern long set_z3_error_handler(Z3_error_handler h);
+
+
 
 #endif
