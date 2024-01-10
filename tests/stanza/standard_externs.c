@@ -171,6 +171,29 @@ int test1_compare(struct test1 *obj1, struct test1 *obj2) {
   }
 }
 
+int test2_init_struct(test2 *obj) {
+  return (int)(obj->a + obj->b );
+
+}
+
+int test2_add(test2 *obj, unsigned long int a) {
+  return (int) ((obj->a * obj->b) + (long)a);
+}
+
+test2 *test2_copy(test2 *obj) {
+  return obj;
+}
+
+int test2_compare(test2 *obj1, test2 *obj2) {
+  if (obj1->a < obj2->a) {
+    return 10;
+  } else {
+    return -10;
+  }
+}
+
+
+
 /* Function Pointer - Basics*/
 
 SignalHandler get_handler(long signum) {
@@ -183,4 +206,8 @@ SignalHandler set_handler(long signum, SignalHandler handler) {
 
 long set_handler_implicit(long signum, void (*h)(long)) {
   return (signum * 7L) + (long)h;
+}
+
+long set_z3_error_handler(Z3_error_handler h) {
+  return 10L + (long)h;
 }

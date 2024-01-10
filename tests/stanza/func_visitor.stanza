@@ -227,28 +227,19 @@ lostanza defmethod equal? (o1:ref<Test1>, o2:ref<Test1>) -> ref<True|False> :
   else:
     return false
 
-; These functions are working - the FuncDeclVisitor is throwing and error:
-; Traceback (most recent call last):
-;   File "/Users/callendorph/src/lbstanza-wrappers/tests/test_func_visitor.py", line 34, in test_basic
-;     visitor.visit(node)
-;   File "/Users/callendorph/src/lbstanza-wrappers/venv2/lib/python3.11/site-packages/pycparser/c_ast.py", line 158, in visit
-;     return visitor(node)
-;            ^^^^^^^^^^^^^
-;   File "/Users/callendorph/src/lbstanza-wrappers/lbstanza_wrappers/FuncDeclVisitor.py", line 89, in generic_visit
-;     self.visit(c)
-;   File "/Users/callendorph/src/lbstanza-wrappers/venv2/lib/python3.11/site-packages/pycparser/c_ast.py", line 158, in visit
-;     return visitor(node)
-;            ^^^^^^^^^^^^^
-;   File "/Users/callendorph/src/lbstanza-wrappers/lbstanza_wrappers/FuncDeclVisitor.py", line 218, in visit_Decl
-;     argsList = self.get_args(fdef)
-;                ^^^^^^^^^^^^^^^^^^^
-;   File "/Users/callendorph/src/lbstanza-wrappers/lbstanza_wrappers/FuncDeclVisitor.py", line 291, in get_args
-;     name, lbType, numPtrs = self.get_decl(p)
-;                             ^^^^^^^^^^^^^^^^
-;   File "/Users/callendorph/src/lbstanza-wrappers/lbstanza_wrappers/FuncDeclVisitor.py", line 238, in get_decl
-;     baseType = p.type.type.names[-1]
-;                ^^^^^^^^^^^^^^^^^
-; AttributeError: 'Struct' object has no attribute 'names'
+; This code throws a compiler error:
+; FATAL ERROR: No appropriate branch for arguments of type (Int).
+  ; in core/print-stack-trace
+  ;   at core/core.stanza:344.14
+  ; in core/fatal
+  ;   at core/core.stanza:397.2
+  ; in core/no-branch-error
+  ;   at core/core.stanza:274.2
+  ; in stz/el-to-vm/Compiler/imms!
+  ;   at compiler/el-to-vm.stanza:793.10
+  ; in stz/el-to-vm/Compiler/imm!
+  ;   at compiler/el-to-vm.stanza:803.13
+  ; in stz/el-to-vm/Compiler/compile
 
 ; public lostanza defn test1_init_struct (obj:ref<Test1>) -> ref<Int>:
 ;   val ret = w_test1_init_struct(addr!(obj))
@@ -259,23 +250,59 @@ lostanza defmethod equal? (o1:ref<Test1>, o2:ref<Test1>) -> ref<True|False> :
 ;   return new Int{ret}
 
 ; public lostanza defn test1_copy (obj:ref<Test1>) -> ref<Test1>:
-
-;   val ret = w_test1_copy(addr!(obj))
-;   return new Test1{ret.a, ret.b}
+;   val ret:ptr<Test1> = w_test1_copy(addr!(obj)) as ptr<Test1>
+;   return new Test1{[ret].a, [ret].b}
 
 ; public lostanza defn test1_compare (obj1:ref<Test1>, obj2:ref<Test1>) -> ref<Int>:
 ;   val ret = w_test1_compare(addr!(obj1), addr!(obj2))
 ;   return new Int{ret}
 
+; public lostanza deftype Test2 <: Equalable:
+;   a:long
+;   b:long
+
+; lostanza defn create-test2 (a:ref<Long>, b:ref<Long>) -> ref<Test2> :
+;   return new Test2{a.value, b.value}
+
+; lostanza defmethod equal? (o1:ref<Test2>, o2:ref<Test2>) -> ref<True|False> :
+;   val ret = (o1.a == o2.a) and (o1.b == o2.b)
+;   if ret > 0:
+;     return true
+;   else:
+;     return false
+
+; public lostanza defn test2_init_struct (obj:ref<Test2>) -> ref<Int>:
+;   val ret = w_test2_init_struct(addr!(obj))
+;   return new Int{ret}
+
+; public lostanza defn test2_add (obj:ref<Test2>, a:ref<Long>) -> ref<Int>:
+;   val ret = w_test2_add(addr!(obj), a.value)
+;   return new Int{ret}
+
+; public lostanza defn test2_copy (obj:ref<Test2>) -> ref<Test2>:
+;   val ret:ptr<Test2> = w_test2_copy(addr!(obj)) as ptr<Test2>
+;   return new Test2{[ret].a, [ret].b}
+
+; public lostanza defn test2_compare (obj1:ref<Test2>, obj2:ref<Test2>) -> ref<Int>:
+;   val ret = w_test2_compare(addr!(obj1), addr!(obj2))
+;   return new Int{ret}
+
+
 
 deftest test_standard_externs_structs_test1:
   val o1 = create-test1(1, 2)
   val o2 = create-test1(3, 4)
+  ; val t1 = create-test2(3L, 5L)
+  ; val t2 = create-test2(1L, 4L)
   val test-vectors = [
     ; [{test1_init_struct(o1)}, 3],
-    ; [{test1_add(o2, 6)}, 26]
+    ;[{test1_add(o2, 6)}, 26]
     ; [{test1_copy(o1)}, o1]
-    ; [{test1_compare(o1, o2)}, -1]
+    ;[{test1_compare(o1, o2)}, -1]
+    ; [{test2_init_struct(t1)}, 8],
+    ; [{test2_add(t2, 5L)}, 9]
+    ; [{test2_copy(t1)}, t1]
+    ; [{test2_compare(t1, t2)}, -10]
   ]
 
   for test-vector in test-vectors do:
@@ -297,12 +324,16 @@ lostanza defn set_handler_implicit (signum:ref<Long>, handler:ref<Long>) -> ref<
   val ret = w_set_handler_implicit(signum.value, handler.value as ptr<?>)
   return new Long{ret}
 
+lostanza defn set_z3_error_handler (handler:ref<Long>) -> ref<Long> :
+  val ret = w_set_z3_error_handler(handler.value as ptr<?>)
+  return new Long{ret}
 
 deftest test_standard_externs_func_ptr:
   val test-vectors = [
     [{get_handler(10L)}, 13L]
     [{set_handler(3L, 1001L)}, 1010L]
     [{set_handler_implicit(21L, 80L)}, 227L]
+    [{set_z3_error_handler(13L)}, 23L]
   ]
 
   for test-vector in test-vectors do:
